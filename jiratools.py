@@ -23,7 +23,7 @@ class Housekeeping():
 
     def content_acquisition_auto_qc(self):
         # Get some issues
-        issues = self.jira.search_issues('project=INDEXREP and status=Merged and updated>="-30m"')
+        issues = self.jira.search_issues('project=INDEXREP and status=Merged and updated<="-30m"')
 
         # Iterate on the issues
         for issue in issues:
