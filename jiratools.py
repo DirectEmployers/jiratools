@@ -20,7 +20,8 @@ class Housekeeping():
                             basic_auth=secrets.housekeeping_auth) 
     
         # commands to run
-        #self.content_acquisition_auto_qc()
+        self.content_acquisition_auto_qc()
+        self.random_auto_assign()
 
     def content_acquisition_auto_qc(self):
         # Get some issues
