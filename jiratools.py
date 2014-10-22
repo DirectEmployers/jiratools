@@ -42,8 +42,9 @@ class Housekeeping():
         members = self.jira.group_members(ca_group)
         issues = self.jira.search_issues(
             'project=INDEXREP and (assignee=EMPTY OR assignee=housekeeping) and \
-             status in (open,reopened) and reporter != contentagent')
-        
+             status in (open,reopened) and reporter != contentagent and \
+             summary !~ "free index"')
+       
         # iterate over the issues and randomly assign them to a user 
         for issue in issues:
             ran_dev = random.choice(members.keys())
