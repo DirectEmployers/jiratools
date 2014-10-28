@@ -69,10 +69,12 @@ class Housekeeping():
         for issue in issues:
             ran_dev = random.choice(members.keys())
             reporter = issue.fields.reporter.key
+            watch_list = self.toggle_watchers("remove",issue)
             self.jira.assign_issue(issue=issue,assignee=ran_dev)
             message = ("[~%s], this issue has been automically assigned "
                 "to [~%s].") % (reporter,ran_dev)
             self.jira.add_comment(issue.key, message)
+            self.toggle_watchers("add",issue,watch_list)
 
     def remind_reporter_to_close(self):
         """
@@ -90,9 +92,11 @@ class Housekeeping():
             message = (
                 "[~%s], this issue has been resolved for 13 days. It will be "
                 "closed automatically in 24 hours.") % reporter
+            watch_list = self.toggle_watchers("remove",issue)
             self.jira.add_comment(issue.key,message)
             issue.fields.labels.append(self.ac_label)
             issue.update(fields={"labels": issue.fields.labels})
+            self.toggle_watchers("add",issue, watch_list)
 
     def close_resolved(self):
         """
@@ -122,8 +126,36 @@ class Housekeeping():
             AND labels in (auto-close-24-hours)')
         for issue in issues:
             label_list =  issue.fields.labels
+            watch_list = self.toggle_watchers("remove",issue)
             label_list.remove(self.ac_label)
             issue.update(fields={"labels": label_list})
+            self.toggle_watchers("add",issue, watch_list)
+
+
+    def toggle_watchers(self,action,issue,watch_list=[]):
+        """
+        Internal method that either adds or removes the watchers of an issue. If
+        it removes them,it returns a list of users that were removed. If it 
+        adds, it returns an updated list of watchers.
+        
+        Inputs:
+        :action: String "add"|"remove". The action to take
+        :issue:  Issue whose watchers list is being modified
+        :watch_list: list of users. Optional for remove. Required for add.
+        
+        Returns:
+        :issue_watcher: List of users who are or were watching the issue.
+        
+        """
+        if action=="remove":
+            issue_watchers = self.jira.watchers(issue)
+            for issue_watcher in issue_watchers.watchers:
+                self.jira.remove_watcher(issue,issue_watcher.name)
+        else:
+            for old_watcher in watch_list:
+                self.jira.add_watcher(issue,old_watcher)
+            issue_watchers = self.jira.watchers(issue)
+        return issue_watchers
                     
 
 Housekeeping()
