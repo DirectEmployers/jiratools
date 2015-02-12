@@ -65,7 +65,22 @@ class Housekeeping():
             'project=INDEXREP and (assignee=EMPTY OR assignee=housekeeping) and \
              status in (open,reopened) and reporter != contentagent and \
              summary !~ "free index"')
-       
+
+        mario_issues = self.jira.search_issues(
+            'project=INDEXREP and (assignee=mario) and \
+             status in (open,reopened)')
+        ron_issues = self.jira.search_issues(
+            'project=INDEXREP and (assignee=mario) and \
+             status in (open,reopened)')
+        chen_issues = self.jira.search_issues(
+            'project=INDEXREP and (assignee=mario) and \
+             status in (open,reopened)')
+
+        assigned_issues = self.jira.search_issues(
+            'project=INDEXREP and status in (open,reopened)')
+
+        print len(assigned_issues)
+        """
         for issue in issues:
             ran_dev = random.choice(members.keys())
             reporter = issue.fields.reporter.key
@@ -75,6 +90,7 @@ class Housekeeping():
                 "to [~%s].") % (reporter,ran_dev)
             self.jira.add_comment(issue.key, message)
             self.toggle_watchers("add",issue,watch_list)
+        """
 
     def remind_reporter_to_close(self):
         """
@@ -158,4 +174,4 @@ class Housekeeping():
         return issue_watchers
                     
 
-Housekeeping()
+#Housekeeping()
