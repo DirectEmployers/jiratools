@@ -6,7 +6,7 @@ for license info.
 from datetime import datetime
 from jira.client import JIRA
 import logging
-import random
+import operator
 import secrets
 
 
@@ -25,7 +25,7 @@ class Housekeeping():
     
         # commands to run
         self.content_acquisition_auto_qc()
-        self.random_auto_assign()
+        self.auto_assign()
         self.remind_reporter_to_close()
         self.close_resolved()
         self.clear_auto_close_label()
@@ -50,11 +50,11 @@ class Housekeeping():
             self.jira.transition_issue(issue.key,'771')
             self.jira.add_comment(issue.key, message)
 
-    def random_auto_assign(self):
+    def auto_assign(self):
         """
         Looks up new INDEXREP issues with an empty assignee and non-agent
-        reporter and assigns them randomly to a developer in the 
-        content-acquisition user group.
+        reporter and assigns them to the user in the content-acquisition user 
+        group with the fewest assigned contect-acquistion tickets. 
 
         """
         ca_group = self.jira.groups(
@@ -65,16 +65,36 @@ class Housekeeping():
             'project=INDEXREP and (assignee=EMPTY OR assignee=housekeeping) and \
              status in (open,reopened) and reporter != contentagent and \
              summary !~ "free index"')
-       
+
+        assigned_issues = self.jira.search_issues(
+            'project=INDEXREP and status in (open,reopened)')
+        
+        member_count = {}
+
+        for member in members:
+            member_count[member]=0
+
+        for issue in assigned_issues:
+            if issue.fields.assignee:
+                assignee = issue.fields.assignee.key
+            else:
+                assignee = None
+            if assignee in members:
+                member_count[assignee] = member_count[assignee]+1
+        
+        member_count_sorted = sorted(member_count.items(), 
+            key=operator.itemgetter(1))
+        username = str(member_count_sorted[0][0])
+        
         for issue in issues:
-            ran_dev = random.choice(members.keys())
             reporter = issue.fields.reporter.key
             watch_list = self.toggle_watchers("remove",issue)
-            self.jira.assign_issue(issue=issue,assignee=ran_dev)
+            self.jira.assign_issue(issue=issue,assignee=username)
             message = ("[~%s], this issue has been automically assigned "
-                "to [~%s].") % (reporter,ran_dev)
+                "to [~%s].") % (reporter,username)
             self.jira.add_comment(issue.key, message)
             self.toggle_watchers("add",issue,watch_list)
+ 
 
     def remind_reporter_to_close(self):
         """
