@@ -100,7 +100,7 @@ class Housekeeping():
         """
         Comments on all non-closed resolved issues that are 13 days without a
         change. Notifies the reporter it will be closed in 24 hours and adds a
-        label to the issue that is used as a lookup key by the close method.
+        label to the issue tha1Gt is used as a lookup key by the close method.
 
         """
         issues = self.jira.search_issues(
@@ -126,13 +126,14 @@ class Housekeeping():
         """
         issues = self.jira.search_issues(
             'resolution != EMPTY AND \
-            status not in (closed, "Quality Control", Reopened, Merged, open) \
+            status not in (closed, "Quality Control", Reopened, Merged, open, \
+            passed,staged) \
             AND updated <= -24h \
             AND labels in (auto-close-24-hours)')
         for issue in issues:
             trans = self.jira.transitions(issue)
             for tran in trans:
-                if tran['name'].lower()=="close":
+                if 'close' in tran['name'].lower():
                     self.jira.transition_issue(issue,tran['id'])
 
     def clear_auto_close_label(self):
