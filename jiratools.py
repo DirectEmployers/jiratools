@@ -100,7 +100,7 @@ class Housekeeping():
         """
         Comments on all non-closed resolved issues that are 13 days without a
         change. Notifies the reporter it will be closed in 24 hours and adds a
-        label to the issue tha1Gt is used as a lookup key by the close method.
+        label to the issue that is used as a lookup key by the close method.
 
         """
         issues = self.jira.search_issues(
