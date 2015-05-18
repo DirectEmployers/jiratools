@@ -192,13 +192,9 @@ class Housekeeping():
         :search_string: the string value being checked for
 
         Returns:
-        :found: True if search_string exists in any label. Default is False.
+        True|False  True if search_string exists in any label.
 
         """
-        found = False
-        for label in issue.fields.labels:
-            if search_string in label:
-                found = True
-        return found
+        return any(search_string in label for label in issue.fields.labels)        
 
 Housekeeping()
