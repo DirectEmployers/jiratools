@@ -2,6 +2,9 @@
 Jira Housekeeping (c)2014 DirectEmployers Association. See README 
 for license info.
 
+Reference for using the jira client:
+http://jira-python.readthedocs.org/en/latest/
+
 """
 from datetime import datetime
 from jira.client import JIRA
@@ -79,7 +82,7 @@ class Housekeeping():
                 assignee = issue.fields.assignee.key
             else:
                 assignee = None
-            if assignee in members:
+            if assignee in members and not self.label_contains(issue,"wait"):
                 member_count[assignee] = member_count[assignee]+1
         
         member_count_sorted = sorted(member_count.items(), 
@@ -177,6 +180,21 @@ class Housekeeping():
                 self.jira.add_watcher(issue,old_watcher.name)
             issue_watchers = self.jira.watchers(issue).watchers
         return issue_watchers
-                    
+
+    def label_contains(self,issue,search_string):
+        """
+        Internal method that searches the labels of an issue for a given string
+        value. It allows filtering that is roughly "labels ~ 'string'", which
+        is not supported by JQL.
+
+        Inputs:
+        :issue: Jira issue object that is being checked
+        :search_string: the string value being checked for
+
+        Returns:
+        True|False  True if search_string exists in any label.
+
+        """
+        return any(search_string in label for label in issue.fields.labels)        
 
 Housekeeping()
