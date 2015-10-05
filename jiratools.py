@@ -66,6 +66,7 @@ class Housekeeping():
             indexrep_summary = issue.fields.summary
             original_ticket = issue.fields.summary.split("(")[1].split(")")[0]
             indexrep_summary = indexrep_summary.replace("compliance audit - ","")
+            indexrep_summary = indexrep_summary.split("(")[0]
             indexrep_summary = ' %s - Failed Audit' % (indexrep_summary)
             message = 'This issue failed audit. Please review %s and make any necessary corrections.' % original_ticket            
             watcher_list = [issue.fields.assignee.key,]
@@ -73,13 +74,15 @@ class Housekeeping():
                 watcher_list.append(w.key)
             watcher_list = set(watcher_list)
             reporter = issue.fields.reporter.key
-            print indexrep_summary
-            print issue
-            print link_list
-            print reporter
-            print message
-            print watcher_list
-            #new_issue = self.make_new_issue("INDEXREP",qa_auditor,reporter,adt_summary,message,watcher_list,[link_back])
+            #print indexrep_summary
+            #print issue
+            #print link_list
+            #print reporter
+            #print message
+            #print watcher_list
+            #make_new_issue(self,project,issue_assignee,issue_reporter,summary,description="",watchers=[],links=[],issuetype="Task"):
+            new_issue = self.make_new_issue("TEST","EMPTY",reporter,indexrep_summary,message,watcher_list,link_list)
+            print new_issue
             #original_assignee = issue.fields.assignee.key
             #generate list of linked issues. Include this issue
             #capture the report
@@ -97,7 +100,7 @@ class Housekeeping():
         TAKES INDEXREP issues that have been resolved for 72 hours and creates
         a new ticket in AUDIT, closes the INDEXREP ticket, and then assigns it
         to the audit user specified in the self.qa_auditor role.
-        841
+        
         
         """
         # get all the INDERXREP issues
@@ -158,14 +161,14 @@ class Housekeeping():
         """
         issue_dict = {
             'project':{'key':project},
-            'summary': adt_summary,
+            'summary': summary,
             'issuetype': {'name':issuetype},
             'description':description,        
             }
-        new_issue = self.jira.create_issue(fields=audit_dict)
+        new_issue = self.jira.create_issue(fields=issue_dict)
         
         # assign the audit tick to auditor
-        new_issue.update(assignee={'name':,issue_assignee})
+        new_issue.update(assignee={'name':issue_assignee})
         new_issue.update(reporter={'name':issue_reporter})
         
         # add watchers to audit ticket (reporter, assignee, wacthers from indexrep ticket)
