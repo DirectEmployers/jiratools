@@ -204,8 +204,8 @@ class Housekeeping():
         
         issues = self.jira.search_issues(
             'project=INDEXREP and (assignee=EMPTY OR assignee=housekeeping) and \
-             status in (open,reopened) and reporter != contentagent and \
-             summary !~ "free index"')
+            status in (open,reopened) and reporter != contentagent and \
+            (summary !~ "free index" OR (summary ~ "free index" and summary ~ "renew"))')
 
         assigned_issues = self.jira.search_issues(
             'project=INDEXREP and status in (open,reopened)')
