@@ -22,8 +22,8 @@ class Housekeeping():
     def __init__(self):
         # class variables
         self.ac_label =  u'auto-close-24-hours'
-        self.audit_delay = '0h'
-        self.audit_projects = "TEST" #comma delimited project keys
+        self.audit_delay = '-72h'
+        self.audit_projects = "INDEXREP" #comma delimited project keys
         # open JIRA API Connection
         self.jira = JIRA(options=secrets.options, 
                             basic_auth=secrets.housekeeping_auth) 
@@ -74,7 +74,10 @@ class Housekeeping():
         for issue in issues:
             link_list = [issue.key,] # first linked ticket should be this audit ticket
             for link in issue.fields.issuelinks: # grab the rest of links
-                link_list.append(link.outwardIssue.key)
+                try:
+                    link_list.append(link.outwardIssue.key)
+                except AttributeError:
+                    pass
             
             # capture orignal tick and project
             original_ticket = issue.fields.summary.split("[")[1].split("]")[0]
@@ -312,16 +315,16 @@ class Housekeeping():
             
     def close_issue(self, issue):
         """
-        Closes the issue passed to it.
+        Closes the issue passed to it with a resolution of fixed.
         Inputs: Issue: the issue object to close
-        Returs: True|False
+        Returns: True|False
         
         """
         trans = self.jira.transitions(issue)
         success_flag = False
         for tran in trans:
             if 'close' in tran['name'].lower():
-                self.jira.transition_issue(issue,tran['id'])
+                self.jira.transition_issue(issue,tran['id'],{'resolution':{'id':'1'}})
                 success_flag = True
         return success_flag
                 
