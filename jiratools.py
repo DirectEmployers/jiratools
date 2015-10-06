@@ -165,7 +165,6 @@ class Housekeeping():
            
             # close the INDEXREP ticket
             close_me = self.close_issue(link_back)
-            print close_me
             
             # add comment to indexrep ticket
             link_back_comment = "This issue has been closed. The audit ticket is %s" % new_issue
