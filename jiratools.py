@@ -22,16 +22,20 @@ class Housekeeping():
     def __init__(self):
         # class variables
         self.ac_label =  u'auto-close-24-hours'
+        self.audit_delay = '-72h'
+        self.audit_projects = "INDEXREP" #comma delimited project keys
         # open JIRA API Connection
         self.jira = JIRA(options=secrets.options, 
                             basic_auth=secrets.housekeeping_auth) 
     
         # commands to run
-        #self.content_acquisition_auto_qc()
-        #self.auto_assign()
-        #self.remind_reporter_to_close()
-        #self.close_resolved()
-        #self.clear_auto_close_label()
+        self.content_acquisition_auto_qc()
+        self.auto_assign()
+        self.remind_reporter_to_close()
+        self.close_resolved()
+        self.clear_auto_close_label()
+        self.resolved_issue_audit()
+        self.handle_audited_tickets()
 
     def content_acquisition_auto_qc(self):
         """
@@ -54,58 +58,76 @@ class Housekeeping():
             self.jira.add_comment(issue.key, message)
     
     def handle_audited_tickets(self):
-        #return True #keep it running. remove once the method runs
-        # look up failed audits. We only care about failed ADT tickets.
-        issues = self.jira.search_issues(
+        """
+        Handles audit tickets that are failed. Closed tickets are ignored. Failed 
+        tickets trigger the creation of a new ticket in the same project as the 
+        original ticket.
+        
+        Inputs: None
+        Returns: None
+        
+        """
+        issues = self.jira.search_issues(   # get all the ADT issues
             'project=ADT and status="Failed Audit"')
-        # generate new indexrep ticket
-        for issue in issues:            
-            link_list = [issue.key,]
-            for link in issue.fields.issuelinks:
-                link_list.append(link.outwardIssue.key)            
-            indexrep_summary = issue.fields.summary
-            original_ticket = issue.fields.summary.split("(")[1].split(")")[0]
+        
+        # For each failed issue, generate a new work ticket then close this one
+        for issue in issues:      
+            link_list = [issue.key,] # first linked ticket should be this audit ticket
+            for link in issue.fields.issuelinks: # grab the rest of links
+                link_list.append(link.outwardIssue.key)
+            
+            # capture orignal tick and project
+            original_ticket = issue.fields.summary.split("[")[1].split("]")[0]
+            original_project = original_ticket.split("-")[0]
+            
+            # build the new summary by parsing the audit summary
+            indexrep_summary = issue.fields.summary #build the summary
             indexrep_summary = indexrep_summary.replace("compliance audit - ","")
-            indexrep_summary = indexrep_summary.split("(")[0]
+            indexrep_summary = indexrep_summary.split("[")[0]
             indexrep_summary = ' %s - Failed Audit' % (indexrep_summary)
-            message = 'This issue failed audit. Please review %s and make any necessary corrections.' % original_ticket            
+            
+            # Build the issue description
+            message = 'This issue failed audit. Please review %s and make any \
+                necessary corrections.' % original_ticket
+
+            # Construct the watcher list and de-dupe it
             watcher_list = [issue.fields.assignee.key,]
             for w in self.jira.watchers(issue).watchers:
                 watcher_list.append(w.key)
             watcher_list = set(watcher_list)
-            reporter = issue.fields.reporter.key
-            #print indexrep_summary
-            #print issue
-            #print link_list
-            #print reporter
-            #print message
-            #print watcher_list
-            #make_new_issue(self,project,issue_assignee,issue_reporter,summary,description="",watchers=[],links=[],issuetype="Task"):
-            new_issue = self.make_new_issue("TEST","EMPTY",reporter,indexrep_summary,message,watcher_list,link_list)
-            print new_issue
-            #original_assignee = issue.fields.assignee.key
-            #generate list of linked issues. Include this issue
-            #capture the report
             
-        # link it to ADT and original INDEXREP ticket
-        # make it unassigned
-        # transfer watchers of original INDEXREP ticket, but not the assignee from the ADT ticket
-        # reporter should be same as ADT
-        # assignee unassigned
-        # comment on the ADT ticket with the new ticket value and the original INDEXREP issue
-        # close the ADT ticket
+            # get the reporter (reporter is preserved from audit to issue)
+            reporter = issue.fields.reporter.key
+            
+            # Generate the new issue, then close the audit ticket.            
+            new_issue = self.make_new_issue(original_project,"EMPTY",reporter,
+                                                                    indexrep_summary,message,
+                                                                    watcher_list,link_list)            
+            close_me = self.close_issue(issue.key)
+                        
     
-    def content_acquisition_3day_audit(self):
+    def resolved_issue_audit(self,delay="",projects=""):
         """
-        TAKES INDEXREP issues that have been resolved for 72 hours and creates
-        a new ticket in AUDIT, closes the INDEXREP ticket, and then assigns it
-        to the audit user specified in the self.qa_auditor role.
+        TAKES issues that have been resolved from specified projectsfor a set 
+        interval and creates a new ticket in AUDIT, closes the INDEXREP ticket, 
+        and then assigns it to the audit user specified in the self.qa_auditor role.
         
+        Inputs:
+        :delay:      how long an issue should be resoved before being picked up
+                        by this script. Defaults to class level variable
+        :projects:  which projects are subject to auditing. Defaults to class level
+                        variable
+        Returns:    Error message or Nothing
         
         """
-        # get all the INDERXREP issues
-        issues = self.jira.search_issues(
-            'project=TEST and status=Resolved')# and resolutiondate<="-72h"')
+        delay = self.audit_delay if delay=="" else delay
+        projects = self.audit_projects if projects=="" else projects
+        # get all the issues from projects in the audit list
+        issue_query = 'project in (%s) and status=Resolved and resolutiondate \
+            <="%s"' % (projects,delay)
+        issues = self.jira.search_issues(issue_query) 
+        
+        # get the users who can be assigned audit tickets. This should be just one person
         qa_members = self.get_group_members("issue audits")
         if len(qa_members)==1:
             qa_auditor=qa_members.keys()[0]
@@ -114,35 +136,44 @@ class Housekeeping():
             # this will also mean turning the code in auto_assign into a method (DRY)
             return "Error: There is more than possible auditor"
         
-        # cycle through them and create a new ADT ticket for each        
+        # cycle through them and create a new ADT ticket for each 
         for issue in issues:
-            link_back = issue.key
-            adt_summary = 'compliance audit - %s (%s)' % (issue.fields.summary,link_back)
-            message = '[~%s], this issue is ready to audit.' % qa_auditor
+            link_list = [issue.key,]
+            for link in issue.fields.issuelinks: # grab the rest of links
+                link_list.append(link.outwardIssue.key)
+            # build the new ticket summary based on the issue being audited
+            # [ISSUE=123] is used to preserve the original issue key. Replace any brackets with () 
+            # to prevent read errors later.
+            adt_summary = issue.fields.summary.replace("[","(").replace("]",")")
+            adt_summary = 'compliance audit - %s [%s]' % (adt_summary,link_back)
+            # build the description
+            message = '[~%s], issue %s is ready to audit.' % (qa_auditor, link_back)
+            
+            #build the watcher list, including original reporter and assignee of the audited ticket
             watcher_list = []
             for w in self.jira.watchers(issue).watchers:
                 watcher_list.append(w.key)
             reporter = issue.fields.reporter.key
-            original_assignee = issue.fields.assignee.key
-            # debug info for dev feedback
-            #print 'Key: %s \n    Summary: %s \n    Message: %s \n    Watchers of ADT: %s, \n    Reporter: %s \n    Assignee: %s \n    Original Assignee: %s \n------------------\n' % (link_back, adt_summary, message, watcher_list, reporter, qa_auditor, original_assignee)
-            #print 'Actions: \n    - %s issue will be closed\n    - a new ADT ticket will be created\n    - The ADT ticket will be assigned\n    - Watchers will include all original watchers + original assignee' % (link_back)
-            #print '    - reporter will be original reporter'
-            #print '    - new ADT will link to %s' % link_back
-            #print '+++++++++++++++++++++++++'            
+            try:
+                original_assignee = issue.fields.assignee.key
+            except AttributeError:
+                original_assignee="EMPTY"         
            
             # make the audit ticket
-            new_issue = self.make_new_issue("ADT",qa_auditor,reporter,adt_summary,message,watcher_list,[link_back])
+            new_issue = self.make_new_issue("ADT",qa_auditor,reporter,
+                adt_summary,message,watcher_list,link_list)
            
             # close the INDEXREP ticket
             close_me = self.close_issue(link_back)
             print close_me
             
             # add comment to indexrep ticket
-            link_back_comment = "This issue has been closed. The audit ticket is %s" % new_adt
+            link_back_comment = "This issue has been closed. The audit ticket is %s" % new_issue
             self.jira.add_comment(link_back, link_back_comment)
+            
         
-    def make_new_issue(self,project,issue_assignee,issue_reporter,summary,description="",watchers=[],links=[],issuetype="Task"):
+    def make_new_issue(self,project,issue_assignee,issue_reporter,summary,
+                                      description="",watchers=[],links=[],issuetype="Task"):
         """
         Creates a new issue with the given parameters.
         Inputs:
