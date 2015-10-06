@@ -22,18 +22,18 @@ class Housekeeping():
     def __init__(self):
         # class variables
         self.ac_label =  u'auto-close-24-hours'
-        self.audit_delay = '-72h'
-        self.audit_projects = "INDEXREP" #comma delimited project keys
+        self.audit_delay = '0h'
+        self.audit_projects = "TEST" #comma delimited project keys
         # open JIRA API Connection
         self.jira = JIRA(options=secrets.options, 
                             basic_auth=secrets.housekeeping_auth) 
     
         # commands to run
-        self.content_acquisition_auto_qc()
-        self.auto_assign()
-        self.remind_reporter_to_close()
-        self.close_resolved()
-        self.clear_auto_close_label()
+        #self.content_acquisition_auto_qc()
+        #self.auto_assign()
+        #self.remind_reporter_to_close()
+        #self.close_resolved()
+        #self.clear_auto_close_label()
         self.resolved_issue_audit()
         self.handle_audited_tickets()
 
@@ -71,7 +71,7 @@ class Housekeeping():
             'project=ADT and status="Failed Audit"')
         
         # For each failed issue, generate a new work ticket then close this one
-        for issue in issues:      
+        for issue in issues:
             link_list = [issue.key,] # first linked ticket should be this audit ticket
             for link in issue.fields.issuelinks: # grab the rest of links
                 link_list.append(link.outwardIssue.key)
@@ -120,8 +120,8 @@ class Housekeeping():
         Returns:    Error message or Nothing
         
         """
-        delay = self.audit_delay if delay=="" else delay
-        projects = self.audit_projects if projects=="" else projects
+        delay = self.audit_delay if not delay else delay
+        projects = self.audit_projects if not projects else projects
         # get all the issues from projects in the audit list
         issue_query = 'project in (%s) and status=Resolved and resolutiondate \
             <="%s"' % (projects,delay)
@@ -140,14 +140,17 @@ class Housekeeping():
         for issue in issues:
             link_list = [issue.key,]
             for link in issue.fields.issuelinks: # grab the rest of links
-                link_list.append(link.outwardIssue.key)
+                try:
+                    link_list.append(link.outwardIssue.key)
+                except AttributeError:
+                    pass
             # build the new ticket summary based on the issue being audited
             # [ISSUE=123] is used to preserve the original issue key. Replace any brackets with () 
             # to prevent read errors later.
             adt_summary = issue.fields.summary.replace("[","(").replace("]",")")
-            adt_summary = 'compliance audit - %s [%s]' % (adt_summary,link_back)
+            adt_summary = 'compliance audit - %s [%s]' % (adt_summary,issue.key)
             # build the description
-            message = '[~%s], issue %s is ready to audit.' % (qa_auditor, link_back)
+            message = '[~%s], issue %s is ready to audit.' % (qa_auditor, issue.key)
             
             #build the watcher list, including original reporter and assignee of the audited ticket
             watcher_list = []
@@ -164,11 +167,11 @@ class Housekeeping():
                 adt_summary,message,watcher_list,link_list)
            
             # close the INDEXREP ticket
-            close_me = self.close_issue(link_back)
+            close_me = self.close_issue(issue.key)
             
             # add comment to indexrep ticket
             link_back_comment = "This issue has been closed. The audit ticket is %s" % new_issue
-            self.jira.add_comment(link_back, link_back_comment)
+            self.jira.add_comment(issue.key, link_back_comment)
             
         
     def make_new_issue(self,project,issue_assignee,issue_reporter,summary,
