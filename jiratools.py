@@ -183,7 +183,7 @@ class Housekeeping():
         Creates a new issue with the given parameters.
         Inputs:
         *REQUIRED*
-            :project:   the jirs project key in which to create the issue
+            :project:   the jira project key in which to create the issue
             :issue_assignee:    user name who the issue will be assigned to
             :issue_reporter:    user name of the issue report
             :summary:   string value of the issue summary field
