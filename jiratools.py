@@ -134,7 +134,7 @@ class Housekeeping():
         else:
             # for now, throw an error. Later, assign to user with fewer ADT tickets
             # this will also mean turning the code in auto_assign into a method (DRY)
-            return "Error: There is more than possible auditor"
+            return "Error: There is more than one possible auditor"
         
         # cycle through them and create a new ADT ticket for each 
         for issue in issues:
