@@ -3,7 +3,7 @@ Jira Housekeeping (c)2014 DirectEmployers Association. See README
 for license info.
 
 Reference for using the jira client:
-http://jira-python.readthedocs.org/en/latest/
+http://pythonhosted.org/jira/
 
 """
 from datetime import datetime
@@ -22,6 +22,8 @@ class Housekeeping():
     def __init__(self):
         # class variables
         self.ac_label =  u'auto-close-24-hours'
+        self.audit_delay = '-72h'
+        self.audit_projects = "INDEXREP" #comma delimited project keys
         # open JIRA API Connection
         self.jira = JIRA(options=secrets.options, 
                             basic_auth=secrets.housekeeping_auth) 
@@ -32,6 +34,8 @@ class Housekeeping():
         self.remind_reporter_to_close()
         self.close_resolved()
         self.clear_auto_close_label()
+        self.resolved_issue_audit()
+        self.handle_audited_tickets()
 
     def content_acquisition_auto_qc(self):
         """
@@ -52,7 +56,178 @@ class Housekeeping():
             """
             self.jira.transition_issue(issue.key,'771')
             self.jira.add_comment(issue.key, message)
+    
+    def handle_audited_tickets(self):
+        """
+        Handles audit tickets that are failed. Closed tickets are ignored. Failed 
+        tickets trigger the creation of a new ticket in the same project as the 
+        original ticket.
+        
+        Inputs: None
+        Returns: None
+        
+        """
+        issues = self.jira.search_issues(   # get all the ADT issues
+            'project=ADT and status="Failed Audit"')
+        
+        # For each failed issue, generate a new work ticket then close this one
+        for issue in issues:
+            link_list = [issue.key,] # first linked ticket should be this audit ticket
+            for link in issue.fields.issuelinks: # grab the rest of links
+                try:
+                    link_list.append(link.outwardIssue.key)
+                except AttributeError:
+                    pass
+            
+            # capture orignal tick and project
+            original_ticket = issue.fields.summary.split("[")[1].split("]")[0]
+            original_project = original_ticket.split("-")[0]
+            
+            # build the new summary by parsing the audit summary
+            indexrep_summary = issue.fields.summary #build the summary
+            indexrep_summary = indexrep_summary.replace("compliance audit - ","")
+            indexrep_summary = indexrep_summary.split("[")[0]
+            indexrep_summary = ' %s - Failed Audit' % (indexrep_summary)
+            
+            # Build the issue description
+            message = 'This issue failed audit. Please review %s and make any \
+                necessary corrections.' % original_ticket
 
+            # Construct the watcher list and de-dupe it
+            watcher_list = [issue.fields.assignee.key,]
+            for w in self.jira.watchers(issue).watchers:
+                watcher_list.append(w.key)
+            watcher_list = set(watcher_list)
+            
+            # get the reporter (reporter is preserved from audit to issue)
+            reporter = issue.fields.reporter.key
+            
+            # Generate the new issue, then close the audit ticket.            
+            new_issue = self.make_new_issue(original_project,"EMPTY",reporter,
+                                                                    indexrep_summary,message,
+                                                                    watcher_list,link_list)            
+            close_me = self.close_issue(issue.key)
+                        
+    
+    def resolved_issue_audit(self,delay="",projects=""):
+        """
+        TAKES issues that have been resolved from specified projectsfor a set 
+        interval and creates a new ticket in AUDIT, closes the INDEXREP ticket, 
+        and then assigns it to the audit user specified in the self.qa_auditor role.
+        
+        Inputs:
+        :delay:      how long an issue should be resoved before being picked up
+                        by this script. Defaults to class level variable
+        :projects:  which projects are subject to auditing. Defaults to class level
+                        variable
+        Returns:    Error message or Nothing
+        
+        """
+        delay = self.audit_delay if not delay else delay
+        projects = self.audit_projects if not projects else projects
+        # get all the issues from projects in the audit list
+        issue_query = 'project in (%s) and status=Resolved and resolutiondate \
+            <="%s"' % (projects,delay)
+        issues = self.jira.search_issues(issue_query) 
+        
+        # get the users who can be assigned audit tickets. This should be just one person
+        qa_members = self.get_group_members("issue audits")
+        if len(qa_members)==1:
+            qa_auditor=qa_members.keys()[0]
+        else:
+            # for now, throw an error. Later, assign to user with fewer ADT tickets
+            # this will also mean turning the code in auto_assign into a method (DRY)
+            return "Error: There is more than one possible auditor"
+        
+        # cycle through them and create a new ADT ticket for each 
+        for issue in issues:
+            link_list = [issue.key,]
+            for link in issue.fields.issuelinks: # grab the rest of links
+                try:
+                    link_list.append(link.outwardIssue.key)
+                except AttributeError:
+                    pass
+            # build the new ticket summary based on the issue being audited
+            # [ISSUE=123] is used to preserve the original issue key. Replace any brackets with () 
+            # to prevent read errors later.
+            adt_summary = issue.fields.summary.replace("[","(").replace("]",")")
+            adt_summary = 'compliance audit - %s [%s]' % (adt_summary,issue.key)
+            # build the description
+            message = '[~%s], issue %s is ready to audit.' % (qa_auditor, issue.key)
+            
+            #build the watcher list, including original reporter and assignee of the audited ticket
+            watcher_list = []
+            for w in self.jira.watchers(issue).watchers:
+                watcher_list.append(w.key)
+            reporter = issue.fields.reporter.key
+            try:
+                original_assignee = issue.fields.assignee.key
+            except AttributeError:
+                original_assignee="EMPTY"         
+           
+            # make the audit ticket
+            new_issue = self.make_new_issue("ADT",qa_auditor,reporter,
+                adt_summary,message,watcher_list,link_list)
+           
+            # close the INDEXREP ticket
+            close_me = self.close_issue(issue.key)
+            
+            # add comment to indexrep ticket
+            link_back_comment = "This issue has been closed. The audit ticket is %s" % new_issue
+            self.jira.add_comment(issue.key, link_back_comment)
+            
+        
+    def make_new_issue(self,project,issue_assignee,issue_reporter,summary,
+                                      description="",watchers=[],links=[],issuetype="Task"):
+        """
+        Creates a new issue with the given parameters.
+        Inputs:
+        *REQUIRED*
+            :project:   the jira project key in which to create the issue
+            :issue_assignee:    user name who the issue will be assigned to
+            :issue_reporter:    user name of the issue report
+            :summary:   string value of the issue summary field
+            *OPTIONAL*
+            :description: Issue description. Defaults to empty string
+            :watchers: list of user names to add as issue watchers
+            :link:  list of issue keys to link to the issue as "Related To"
+            :issuetype: the type of issue to create. Defaults to type.
+        Returns: Jira Issue Object
+        
+        """
+        issue_dict = {
+            'project':{'key':project},
+            'summary': summary,
+            'issuetype': {'name':issuetype},
+            'description':description,        
+            }
+        new_issue = self.jira.create_issue(fields=issue_dict)
+        
+        # assign the audit tick to auditor
+        new_issue.update(assignee={'name':issue_assignee})
+        new_issue.update(reporter={'name':issue_reporter})
+        
+        # add watchers to audit ticket (reporter, assignee, wacthers from indexrep ticket)
+        for watcher in watchers:
+            self.jira.add_watcher(new_issue,watcher)
+        
+        # link the audit ticket back to indexrep ticket
+        for link in links:
+            self.jira.create_issue_link('Relates',new_issue,link)
+            
+        return new_issue
+            
+    # method to transistion audit ticket    
+    def get_group_members(self, group_name):
+        """
+        Returns the members of a 
+        """
+        group = self.jira.groups(
+            query=group_name
+            )['groups'][0]['name']
+        members = self.jira.group_members(group)
+        return members
+        
     def auto_assign(self):
         """
         Looks up new INDEXREP issues with an empty assignee and non-agent
@@ -60,10 +235,12 @@ class Housekeeping():
         group with the fewest assigned contect-acquistion tickets. 
 
         """
-        ca_group = self.jira.groups(
-            query='content-acquisition'
-            )['groups'][0]['name']
-        members = self.jira.group_members(ca_group)
+        #ca_group = self.jira.groups(
+        #    query='content-acquisition'
+        #    )['groups'][0]['name']
+        #members = self.jira.group_members(ca_group)        
+        members = self.get_group_members('content-acquisition')
+        
         issues = self.jira.search_issues(
             'project=INDEXREP and (assignee=EMPTY OR assignee=housekeeping) and \
             status in (open,reopened) and reporter != contentagent and \
@@ -134,11 +311,23 @@ class Housekeeping():
             AND updated <= -24h \
             AND labels in (auto-close-24-hours)')
         for issue in issues:
-            trans = self.jira.transitions(issue)
-            for tran in trans:
-                if 'close' in tran['name'].lower():
-                    self.jira.transition_issue(issue,tran['id'])
-
+            close_me = self.close_issue(issue)
+            
+    def close_issue(self, issue):
+        """
+        Closes the issue passed to it with a resolution of fixed.
+        Inputs: Issue: the issue object to close
+        Returns: True|False
+        
+        """
+        trans = self.jira.transitions(issue)
+        success_flag = False
+        for tran in trans:
+            if 'close' in tran['name'].lower():
+                self.jira.transition_issue(issue,tran['id'],{'resolution':{'id':'1'}})
+                success_flag = True
+        return success_flag
+                
     def clear_auto_close_label(self):
         """
         Clears the auto-close label from issues that have been re-opened
