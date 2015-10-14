@@ -8,7 +8,6 @@ http://pythonhosted.org/jira/
 """
 from datetime import datetime
 from jira.client import JIRA
-from jira.exceptions import JIRAError
 import logging
 import operator
 import secrets
@@ -329,7 +328,7 @@ class Housekeeping():
                 try:
                     self.jira.transition_issue(issue,tran['id'],{'resolution':{'id':'1'}})
                 #some close transitions don't have a resolution screen
-                except:
+                except: #open ended, but the JIRAError exception is broken.
                     self.jira.transition_issue(issue,tran['id'])
                 success_flag = True
         print issue
