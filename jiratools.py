@@ -322,7 +322,7 @@ class Housekeeping():
         
         """
         trans = self.jira.transitions(issue)
-        success_flag = False        
+        success_flag = False
         for tran in trans:
             if 'close' in tran['name'].lower():
                 try:
