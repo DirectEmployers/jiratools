@@ -244,7 +244,8 @@ class Housekeeping():
         issues = self.jira.search_issues(
             'project=INDEXREP and (assignee=EMPTY OR assignee=housekeeping) and \
             status in (open,reopened) and reporter != contentagent and \
-            (summary !~ "free index" OR (summary ~ "free index" and summary ~ "renew"))')
+            (summary !~ "free index" OR (summary ~ "free index" and \
+            (summary ~ "renew" OR description ~ "renew")))')
 
         assigned_issues = self.jira.search_issues(
             'project=INDEXREP and status in (open,reopened)')
@@ -324,7 +325,11 @@ class Housekeeping():
         success_flag = False
         for tran in trans:
             if 'close' in tran['name'].lower():
-                self.jira.transition_issue(issue,tran['id'],{'resolution':{'id':'1'}})
+                try:
+                    self.jira.transition_issue(issue,tran['id'],{'resolution':{'id':'1'}})
+                #some close transitions don't have a resolution screen
+                except: #open ended, but the JIRAError exception is broken.
+                    self.jira.transition_issue(issue,tran['id'])
                 success_flag = True
         return success_flag
                 
