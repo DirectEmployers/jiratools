@@ -331,7 +331,6 @@ class Housekeeping():
                 except: #open ended, but the JIRAError exception is broken.
                     self.jira.transition_issue(issue,tran['id'])
                 success_flag = True
-        print issue
         return success_flag
                 
     def clear_auto_close_label(self):
