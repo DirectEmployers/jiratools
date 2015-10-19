@@ -29,13 +29,14 @@ class Housekeeping():
                             basic_auth=secrets.housekeeping_auth) 
     
         # commands to run
-        #return self.content_acquisition_auto_qc()
-        #self.auto_assign()
-        #self.remind_reporter_to_close()
-        #self.close_resolved()
-        #self.clear_auto_close_label()
-        #self.resolved_issue_audit()
-        #self.handle_audited_tickets()
+        self.content_acquisition_auto_qc()
+        self.auto_assign()
+        self.remind_reporter_to_close()
+        # auto close is disabled for now, as it is causing more problems than it solves.
+        #self.close_resolved() 
+        self.clear_auto_close_label()
+        self.resolved_issue_audit()
+        self.handle_audited_tickets()
 
     def content_acquisition_auto_qc(self):
         """
