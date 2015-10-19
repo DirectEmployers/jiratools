@@ -32,7 +32,8 @@ class Housekeeping():
         self.content_acquisition_auto_qc()
         self.auto_assign()
         self.remind_reporter_to_close()
-        self.close_resolved()
+        # auto close is disabled for now, as it is causing more problems than it solves.
+        #self.close_resolved() 
         self.clear_auto_close_label()
         self.resolved_issue_audit()
         self.handle_audited_tickets()
@@ -46,7 +47,7 @@ class Housekeeping():
         """
         issues = self.jira.search_issues(
             'project=INDEXREP and status=Merged and updated<="-30m"')
-
+        
         for issue in issues:
             reporter = issue.fields.reporter.key
             message = '[~%s], this issue is ready for QC.' % reporter
@@ -72,6 +73,21 @@ class Housekeeping():
         
         # For each failed issue, generate a new work ticket then close this one
         for issue in issues:
+            #BUID
+            adt_buid=issue.fields.customfield_10502
+            #WCID
+            adt_wcid=issue.fields.customfield_10501
+            #Indexing Type
+            adt_indexing_type=issue.fields.customfield_10500
+            #comments
+            adt_comments = []
+            for comment in self.jira.comments(issue):
+                node = {
+                    'body':self.jira.comment(issue,comment).body,
+                    'author': self.jira.comment(issue,comment).author.key
+                }
+                adt_comments.append(node)
+                        
             link_list = [issue.key,] # first linked ticket should be this audit ticket
             for link in issue.fields.issuelinks: # grab the rest of links
                 try:
@@ -102,10 +118,11 @@ class Housekeeping():
             # get the reporter (reporter is preserved from audit to issue)
             reporter = issue.fields.reporter.key
             
-            # Generate the new issue, then close the audit ticket.            
+            # Generate the new issue, then close the audit ticket.    
             new_issue = self.make_new_issue(original_project,"EMPTY",reporter,
                                                                     indexrep_summary,message,
-                                                                    watcher_list,link_list)            
+                                                                    watcher_list,link_list,adt_buid,
+                                                                    adt_wcid,adt_indexing_type,adt_comments)            
             close_me = self.close_issue(issue.key)
                         
     
@@ -141,6 +158,12 @@ class Housekeeping():
         
         # cycle through them and create a new ADT ticket for each 
         for issue in issues:
+            #BUID
+            ind_buid=issue.fields.customfield_10502
+            #WCID
+            ind_wcid=issue.fields.customfield_10501
+            #Indexing Type
+            ind_indexing_type=issue.fields.customfield_10500
             link_list = [issue.key,]
             for link in issue.fields.issuelinks: # grab the rest of links
                 try:
@@ -167,7 +190,8 @@ class Housekeeping():
            
             # make the audit ticket
             new_issue = self.make_new_issue("ADT",qa_auditor,reporter,
-                adt_summary,message,watcher_list,link_list)
+                adt_summary,message,watcher_list,link_list,ind_buid,
+                ind_wcid,ind_indexing_type)
            
             # close the INDEXREP ticket
             close_me = self.close_issue(issue.key)
@@ -178,7 +202,8 @@ class Housekeeping():
             
         
     def make_new_issue(self,project,issue_assignee,issue_reporter,summary,
-                                      description="",watchers=[],links=[],issuetype="Task"):
+                                      description="",watchers=[],links=[],buid="",wcid="",
+                                      indexing_type="",comments=[],issuetype="Task"):
         """
         Creates a new issue with the given parameters.
         Inputs:
@@ -192,6 +217,10 @@ class Housekeeping():
             :watchers: list of user names to add as issue watchers
             :link:  list of issue keys to link to the issue as "Related To"
             :issuetype: the type of issue to create. Defaults to type.
+            :buid: business unit - custom field 10502
+            :wcid: wrapping company id - custom field 10501
+            :indexing_type: the indexing type - custom field 10500
+            :comments: list dictionaries of comments and authors to auto add.
         Returns: Jira Issue Object
         
         """
@@ -214,6 +243,23 @@ class Housekeeping():
         # link the audit ticket back to indexrep ticket
         for link in links:
             self.jira.create_issue_link('Relates',new_issue,link)
+        
+        # add custom field values if set
+        if buid:
+            new_issue.update(fields={'customfield_10502':buid})
+        if wcid:
+            new_issue.update(fields={'customfield_10501':wcid})
+        if indexing_type:
+            new_issue.update(fields={'customfield_10500':{'value':indexing_type.value}})
+        
+        # add comments
+        quoted_comments = ""
+        for comment in comments:
+            quoted_comments = "[~%s] Said:{quote}%s{quote}" % (comment['author'],comment['body'])
+            
+        if quoted_comments:
+            quoted_comments = "Comments from the parent issue:\\\ %s" % quoted_comments
+            self.jira.add_comment(new_issue,quoted_comments)
             
         return new_issue
             
