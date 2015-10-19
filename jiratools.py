@@ -255,7 +255,7 @@ class Housekeeping():
         # add comments
         quoted_comments = ""
         for comment in comments:
-            quoted_comments = "[~%s] Said:{quote}%s{quote}" % (comment['author'],comment['body'])
+            quoted_comments = "%s[~%s] Said:{quote}%s{quote}\\\ \\\ " % (quoted_comments,comment['author'],comment['body'])
             
         if quoted_comments:
             quoted_comments = "Comments from the parent issue:\\\ %s" % quoted_comments
