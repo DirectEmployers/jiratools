@@ -22,7 +22,7 @@ class Housekeeping():
     def __init__(self):
         # class variables
         self.ac_label =  u'auto-close-24-hours'
-        self.audit_delay = '0h'
+        self.audit_delay = '-72h'
         self.audit_projects = "INDEXREP" #comma delimited project keys
         # open JIRA API Connection
         self.jira = JIRA(options=secrets.options, 
