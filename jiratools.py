@@ -58,7 +58,7 @@ class Housekeeping():
             self.jira.transition_issue(issue.key,'771')
             self.jira.add_comment(issue.key, message)
     
-    def handle_audited_tickets(self):f
+    def handle_audited_tickets(self):
         """
         Handles audit tickets that are failed. Closed tickets are ignored. Failed 
         tickets trigger the creation of a new ticket in the same project as the 
