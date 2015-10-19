@@ -47,9 +47,7 @@ class Housekeeping():
         """
         issues = self.jira.search_issues(
             'project=INDEXREP and status=Merged and updated<="-30m"')
-        issues = self.jira.search_issues(
-            'key=ADT-55 ')
-
+        
         for issue in issues:
             reporter = issue.fields.reporter.key
             message = '[~%s], this issue is ready for QC.' % reporter
@@ -82,7 +80,6 @@ class Housekeeping():
             #Indexing Type
             adt_indexing_type=issue.fields.customfield_10500
             #comments
-            
             adt_comments = []
             for comment in self.jira.comments(issue):
                 node = {
