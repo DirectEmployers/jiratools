@@ -280,12 +280,9 @@ class Housekeeping():
         reporter and assigns them to the user in the content-acquisition user 
         group with the fewest assigned contect-acquistion tickets. 
 
-        """
-        #ca_group = self.jira.groups(
-        #    query='content-acquisition'
-        #    )['groups'][0]['name']
-        #members = self.jira.group_members(ca_group)        
+        """      
         members = self.get_group_members('content-acquisition')
+        ignore_nm_counts = self.get_group_members('ignore-non-member-counts')
         
         issues = self.jira.search_issues(
             'project=INDEXREP and (assignee=EMPTY OR assignee=housekeeping) and \
@@ -302,12 +299,19 @@ class Housekeeping():
             member_count[member]=0
 
         for issue in assigned_issues:
+            index_type = issue.fields.customfield_10500
             if issue.fields.assignee:
                 assignee = issue.fields.assignee.key
             else:
                 assignee = None
             if assignee in members and not self.label_contains(issue,"wait"):
-                member_count[assignee] = member_count[assignee]+1
+                # if the user is set to ignore non-member tickets in their
+                # count, check the indextype
+                if assignee in ignore_nm_counts:
+                    if index_type.id == '10103': #10103 is the ID for "Member"
+                        member_count[assignee] = member_count[assignee]+1                    
+                else:                    
+                    member_count[assignee] = member_count[assignee]+1
         
         member_count_sorted = sorted(member_count.items(), 
             key=operator.itemgetter(1))
