@@ -351,7 +351,7 @@ class Housekeeping():
     def close_resolved(self):
         """
         Looks up all issues labeled for auto-closing that have not been updated
-        in 24 hours and closes them. Ignored INDEXREP so as to not interfere
+        in 24 hours and closes them. Ignores INDEXREP so as to not interfere
         with the auditing process.
 
         """
