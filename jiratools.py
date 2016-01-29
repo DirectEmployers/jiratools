@@ -359,6 +359,7 @@ class Housekeeping():
             'resolution != EMPTY AND \
             status not in (closed, "Quality Control", Reopened, Merged, open, \
             passed,staged) AND project not in (INDEXREP) \
+            AND updated <= -24h \
             AND labels in (auto-close-24-hours)')
         for issue in issues:
             reporter = issue.fields.reporter.key
