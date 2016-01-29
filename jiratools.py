@@ -36,7 +36,7 @@ class Housekeeping():
         self.clear_auto_close_label()
         self.resolved_issue_audit()
         self.handle_audited_tickets()
-        
+
     def content_acquisition_auto_qc(self):
         """
         Takes INDEXREP issues that have been Merged for 30+ minutes and 
@@ -385,7 +385,7 @@ class Housekeeping():
                 #some close transitions don't have a resolution screen
                 except: #open ended, but the JIRAError exception is broken.
                     self.jira.transition_issue(issue,tran['id'])
-                success_flag = True                
+                success_flag = True
         return success_flag
                 
     def clear_auto_close_label(self):
