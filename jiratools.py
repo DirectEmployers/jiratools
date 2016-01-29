@@ -32,12 +32,11 @@ class Housekeeping():
         self.content_acquisition_auto_qc()
         self.auto_assign()
         self.remind_reporter_to_close()
-        # auto close is disabled for now, as it is causing more problems than it solves.
-        #self.close_resolved() 
+        self.close_resolved() 
         self.clear_auto_close_label()
         self.resolved_issue_audit()
         self.handle_audited_tickets()
-
+        
     def content_acquisition_auto_qc(self):
         """
         Takes INDEXREP issues that have been Merged for 30+ minutes and 
@@ -337,7 +336,7 @@ class Housekeeping():
         issues = self.jira.search_issues(
             'resolution != EMPTY AND \
             status not in (closed, "Quality Control", Reopened, Merged, open) \
-            AND updated <= -13d')
+            AND updated <= -13d and project not in (INDEXREP)')
         for issue in issues:
             reporter = issue.fields.reporter.key
             message = (
@@ -352,17 +351,21 @@ class Housekeeping():
     def close_resolved(self):
         """
         Looks up all issues labeled for auto-closing that have not been updated
-        in 24 hours and closes them.
+        in 24 hours and closes them. Ignored INDEXREP so as to not interfere
+        with the auditing process.
 
         """
         issues = self.jira.search_issues(
             'resolution != EMPTY AND \
             status not in (closed, "Quality Control", Reopened, Merged, open, \
-            passed,staged) \
-            AND updated <= -24h \
+            passed,staged) AND project not in (INDEXREP) \
             AND labels in (auto-close-24-hours)')
         for issue in issues:
+            reporter = issue.fields.reporter.key
+            message = (
+                "[~%s], this issue has closed automatically.") % reporter
             close_me = self.close_issue(issue)
+            self.jira.add_comment(issue.key,message)
             
     def close_issue(self, issue):
         """
@@ -374,13 +377,14 @@ class Housekeeping():
         trans = self.jira.transitions(issue)
         success_flag = False
         for tran in trans:
-            if 'close' in tran['name'].lower():
+            tran_name = tran['name'].lower()
+            if 'close' in tran_name or 'complete' in tran_name:
                 try:
                     self.jira.transition_issue(issue,tran['id'],{'resolution':{'id':'1'}})
                 #some close transitions don't have a resolution screen
                 except: #open ended, but the JIRAError exception is broken.
                     self.jira.transition_issue(issue,tran['id'])
-                success_flag = True
+                success_flag = True                
         return success_flag
                 
     def clear_auto_close_label(self):
