@@ -309,9 +309,7 @@ class Housekeeping():
                 # count, check the indextype
                 if assignee in ignore_nm_counts:
                     if index_type.id == '10103': #10103 is the ID for "Member"
-                        member_count[assignee] = member_count[assignee]+1
-                    else:
-                        member_count[assignee]=member_count[assignee]
+                        member_count[assignee] = member_count[assignee]+1                    
                 else:                    
                     member_count[assignee] = member_count[assignee]+1
         
