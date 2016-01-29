@@ -29,14 +29,14 @@ class Housekeeping():
                             basic_auth=secrets.housekeeping_auth) 
     
         # commands to run
-        #self.content_acquisition_auto_qc()
+        self.content_acquisition_auto_qc()
         self.auto_assign()
-        #self.remind_reporter_to_close()
+        self.remind_reporter_to_close()
         # auto close is disabled for now, as it is causing more problems than it solves.
         #self.close_resolved() 
-        #self.clear_auto_close_label()
-        #self.resolved_issue_audit()
-        #self.handle_audited_tickets()
+        self.clear_auto_close_label()
+        self.resolved_issue_audit()
+        self.handle_audited_tickets()
 
     def content_acquisition_auto_qc(self):
         """
@@ -280,11 +280,7 @@ class Housekeeping():
         reporter and assigns them to the user in the content-acquisition user 
         group with the fewest assigned contect-acquistion tickets. 
 
-        """
-        #ca_group = self.jira.groups(
-        #    query='content-acquisition'
-        #    )['groups'][0]['name']
-        #members = self.jira.group_members(ca_group)        
+        """      
         members = self.get_group_members('content-acquisition')
         ignore_nm_counts = self.get_group_members('ignore-non-member-counts')
         
@@ -312,7 +308,6 @@ class Housekeeping():
                 # if the user is set to ignore non-member tickets in their
                 # count, check the indextype
                 if assignee in ignore_nm_counts:
-                    #print "-%s-" % index_type
                     if index_type.id == '10103': #10103 is the ID for "Member"
                         member_count[assignee] = member_count[assignee]+1
                     else:
