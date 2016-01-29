@@ -314,7 +314,6 @@ class Housekeeping():
                         member_count[assignee]=member_count[assignee]
                 else:                    
                     member_count[assignee] = member_count[assignee]+1
-        print member_count
         
         member_count_sorted = sorted(member_count.items(), 
             key=operator.itemgetter(1))
