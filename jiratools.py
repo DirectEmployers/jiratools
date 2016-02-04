@@ -299,6 +299,11 @@ class Housekeeping():
 
         for issue in assigned_issues:
             index_type = issue.fields.customfield_10500
+            if index_type:
+                index_id = index_type.id
+            else:
+                index_id = 0
+                
             if issue.fields.assignee:
                 assignee = issue.fields.assignee.key
             else:
@@ -307,7 +312,7 @@ class Housekeeping():
                 # if the user is set to ignore non-member tickets in their
                 # count, check the indextype
                 if assignee in ignore_nm_counts:
-                    if index_type.id == '10103': #10103 is the ID for "Member"
+                    if index_id == '10103': #10103 is the ID for "Member"
                         member_count[assignee] = member_count[assignee]+1                    
                 else:                    
                     member_count[assignee] = member_count[assignee]+1
