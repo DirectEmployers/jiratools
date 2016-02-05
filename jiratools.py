@@ -283,11 +283,15 @@ class Housekeeping():
         members = self.get_group_members('content-acquisition')
         ignore_nm_counts = self.get_group_members('ignore-non-member-counts')
         
-        issues = self.jira.search_issues(
-            'project=INDEXREP and (assignee=EMPTY OR assignee=housekeeping) and \
-            status in (open,reopened) and reporter != contentagent and \
-            (summary !~ "free index" OR (summary ~ "free index" and \
-            (summary ~ "renew" OR description ~ "renew")))')
+        """
+        Test of using jira filters as a sort of stored procedure that allows
+        modification of queries without a code change. Run this is production
+        for a bit and see if it causes problems. If not, go through and replace
+        other jql statements as well.
+        
+        """
+        the_jql = self.jira.filter("20702").jql        
+        issues = self.jira.search_issues(the_jql)
 
         assigned_issues = self.jira.search_issues(
             'project=INDEXREP and status in (open,reopened)')
