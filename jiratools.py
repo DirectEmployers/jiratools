@@ -290,8 +290,8 @@ class Housekeeping():
         other jql statements as well.
         
         """
-        the_jql = self.jira.filter("20702").jql        
-        issues = self.jira.search_issues(the_jql)
+        jql_query = self.jira.filter("20702").jql        
+        issues = self.jira.search_issues(jql_query)
 
         assigned_issues = self.jira.search_issues(
             'project=INDEXREP and status in (open,reopened)')
