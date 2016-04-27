@@ -280,9 +280,16 @@ class Housekeeping():
         group with the fewest assigned contect-acquistion tickets. 
 
         """        
-        # filter 20702 returns issues that need to auto assigned
+        # filter 20702 returns member issues that need to auto assigned
         jql_query = self.jira.filter("20702").jql        
-        issues = self.jira.search_issues(jql_query)
+        mem_issues = self.jira.search_issues(jql_query)
+        
+        #filter 21400 returns non-member issues that need to be assigned
+        jql_query = self.jira.filter("21400").jql        
+        nm_issues = self.jira.search_issues(jql_query)
+        
+        #merge the lists so that members are first
+        issues = mem_issues + nm_issues
         
         #filter 21200 returns non-resolved assigned issues
         assigned_issues_query = self.jira.filter("21200").jql
@@ -300,7 +307,7 @@ class Housekeeping():
                 "to [~%s].") % (reporter,username)
             self.jira.add_comment(issue.key, message)
             self.toggle_watchers("add",issue,watch_list)
-           
+            
         
     def remind_reporter_to_close(self):
         """
