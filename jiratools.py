@@ -279,26 +279,20 @@ class Housekeeping():
         reporter and assigns them to the user in the content-acquisition user 
         group with the fewest assigned contect-acquistion tickets. 
 
-        """
-        members = self.get_group_members('content-acquisition')
-        ignore_nm_counts = self.get_group_members('ignore-non-member-counts')
-        
+        """        
         # filter 20702 returns issues that need to auto assigned
         jql_query = self.jira.filter("20702").jql        
         issues = self.jira.search_issues(jql_query)
         
         #filter 21200 returns non-resolved assigned issues
         assigned_issues_query = self.jira.filter("21200").jql
-        #assigned_issues = self.jira.search_issues(assigned_issues_query)
         
-        
-        
+        # cycle through each issue and assign it to the user in 
+        # content acquisition with the fewest assigned tickets
         for issue in issues:
             
-            username = user_with_fewest_issues(assigned_issues_query, False)
-            
-            print username
-            """
+            username = self.user_with_fewest_issues('content-acquisition', 
+                                                    assigned_issues_query)
             reporter = issue.fields.reporter.key
             watch_list = self.toggle_watchers("remove",issue)
             self.jira.assign_issue(issue=issue,assignee=username)
@@ -306,109 +300,8 @@ class Housekeeping():
                 "to [~%s].") % (reporter,username)
             self.jira.add_comment(issue.key, message)
             self.toggle_watchers("add",issue,watch_list)
-            """
-    
-    def user_with_fewest_issues(self,query,include_resolved=False):
-        """
-        Given a query, return the username of the use with the fewest assigned
-        issues in the result set.
+           
         
-        """
-        issues = self.jira.search_issues(query)
-        
-        member_count = {}
-
-        for member in members:
-            member_count[member]=0
-
-        # get counts for each dev
-        for issue in issues:
-            index_type = issue.fields.customfield_10500
-            if index_type:
-                index_id = index_type.id
-            else:
-                index_id = 0
-                
-            if issue.fields.assignee:
-                assignee = issue.fields.assignee.key
-            else:
-                assignee = None
-            if assignee in members and not self.label_contains(issue,"wait"):
-                # if the user is set to ignore non-member tickets in their
-                # count, check the indextype
-                if assignee in ignore_nm_counts:
-                    if index_id == '10103': #10103 is the ID for "Member"
-                        member_count[assignee] = member_count[assignee]+1                    
-                else:                    
-                    member_count[assignee] = member_count[assignee]+1
-        
-        member_count_sorted = sorted(member_count.items(), 
-            key=operator.itemgetter(1))
-        username = str(member_count_sorted[0][0])
-        return username
-        
-    def auto_assign_old(self):
-        """
-        Looks up new INDEXREP issues with an empty assignee and non-agent
-        reporter and assigns them to the user in the content-acquisition user 
-        group with the fewest assigned contect-acquistion tickets. 
-
-        """      
-        members = self.get_group_members('content-acquisition')
-        ignore_nm_counts = self.get_group_members('ignore-non-member-counts')
-        
-        """
-        Test of using jira filters as a sort of stored procedure that allows
-        modification of queries without a code change. Run this is production
-        for a bit and see if it causes problems. If not, go through and replace
-        other jql statements as well.
-        
-        """
-        jql_query = self.jira.filter("20702").jql        
-        issues = self.jira.search_issues(jql_query)
-
-        assigned_issues = self.jira.search_issues(
-            'project=INDEXREP and status in (open,reopened)')
-        
-        member_count = {}
-
-        for member in members:
-            member_count[member]=0
-
-        for issue in assigned_issues:
-            index_type = issue.fields.customfield_10500
-            if index_type:
-                index_id = index_type.id
-            else:
-                index_id = 0
-                
-            if issue.fields.assignee:
-                assignee = issue.fields.assignee.key
-            else:
-                assignee = None
-            if assignee in members and not self.label_contains(issue,"wait"):
-                # if the user is set to ignore non-member tickets in their
-                # count, check the indextype
-                if assignee in ignore_nm_counts:
-                    if index_id == '10103': #10103 is the ID for "Member"
-                        member_count[assignee] = member_count[assignee]+1                    
-                else:                    
-                    member_count[assignee] = member_count[assignee]+1
-        
-        member_count_sorted = sorted(member_count.items(), 
-            key=operator.itemgetter(1))
-        username = str(member_count_sorted[0][0])
-        
-        for issue in issues:
-            reporter = issue.fields.reporter.key
-            watch_list = self.toggle_watchers("remove",issue)
-            self.jira.assign_issue(issue=issue,assignee=username)
-            message = ("[~%s], this issue has been automically assigned "
-                "to [~%s].") % (reporter,username)
-            self.jira.add_comment(issue.key, message)
-            self.toggle_watchers("add",issue,watch_list)
- 
-
     def remind_reporter_to_close(self):
         """
         Comments on all non-closed resolved issues that are 13 days without a
@@ -513,7 +406,7 @@ class Housekeeping():
             issue_watchers = self.jira.watchers(issue).watchers
         return issue_watchers
 
-    def label_contains(self,issue,search_string):
+    def label_contains(self,issue,search_string):        
         """
         Internal method that searches the labels of an issue for a given string
         value. It allows filtering that is roughly "labels ~ 'string'", which
@@ -527,6 +420,52 @@ class Housekeeping():
         True|False  True if search_string exists in any label.
 
         """
-        return any(search_string in label for label in issue.fields.labels)        
+        return any(search_string in label for label in issue.fields.labels)    
+    
+    def user_with_fewest_issues(self,group,query):
+        """
+        Given a query, return the username of the use with the fewest assigned
+        issues in the result set.
+        
+        Inputs:
+        group: the group of users for which to count issues.
+        query: the issues to lookup. Should be a JQL string.
+        
+        """
+        members = self.get_group_members(group)
+        ignore_nm_counts = self.get_group_members('ignore-non-member-counts')
+        
+        issues = self.jira.search_issues(query)
+        
+        member_count = {}
+
+        for member in members:
+            member_count[member]=0
+
+        # perform the count anew for each ticket
+        for issue in issues:
+            index_type = issue.fields.customfield_10500
+            if index_type:
+                index_id = index_type.id
+            else:
+                index_id = 0
+                
+            if issue.fields.assignee:
+                assignee = issue.fields.assignee.key
+            else:
+                assignee = None
+            if assignee in members and not self.label_contains(issue,"wait"):
+                # if the user is set to ignore non-member tickets in their
+                # count, check the indextype
+                if assignee in ignore_nm_counts:
+                    if index_id == '10103': #10103 is the ID for "Member"
+                        member_count[assignee] = member_count[assignee]+1                    
+                else:                    
+                    member_count[assignee] = member_count[assignee]+1
+        #sort the list so that the user with the lowest count is first
+        member_count_sorted = sorted(member_count.items(), 
+            key=operator.itemgetter(1))
+        # return the username of the user 
+        return str(member_count_sorted[0][0]) 
 
 Housekeeping()
