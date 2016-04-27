@@ -29,13 +29,13 @@ class Housekeeping():
                             basic_auth=secrets.housekeeping_auth) 
     
         # commands to run
-        self.content_acquisition_auto_qc()
+        #self.content_acquisition_auto_qc()
         self.auto_assign()
-        self.remind_reporter_to_close()
-        self.close_resolved() 
-        self.clear_auto_close_label()
-        self.resolved_issue_audit()
-        self.handle_audited_tickets()
+        #self.remind_reporter_to_close()
+        #self.close_resolved() 
+        #self.clear_auto_close_label()
+        #self.resolved_issue_audit()
+        #self.handle_audited_tickets()
 
     def content_acquisition_auto_qc(self):
         """
@@ -272,8 +272,82 @@ class Housekeeping():
             )['groups'][0]['name']
         members = self.jira.group_members(group)
         return members
-        
+    
     def auto_assign(self):
+        """
+        Looks up new INDEXREP issues with an empty assignee and non-agent
+        reporter and assigns them to the user in the content-acquisition user 
+        group with the fewest assigned contect-acquistion tickets. 
+
+        """
+        members = self.get_group_members('content-acquisition')
+        ignore_nm_counts = self.get_group_members('ignore-non-member-counts')
+        
+        # filter 20702 returns issues that need to auto assigned
+        jql_query = self.jira.filter("20702").jql        
+        issues = self.jira.search_issues(jql_query)
+        
+        #filter 21200 returns non-resolved assigned issues
+        assigned_issues_query = self.jira.filter("21200").jql
+        #assigned_issues = self.jira.search_issues(assigned_issues_query)
+        
+        
+        
+        for issue in issues:
+            
+            username = user_with_fewest_issues(assigned_issues_query, False)
+            
+            print username
+            """
+            reporter = issue.fields.reporter.key
+            watch_list = self.toggle_watchers("remove",issue)
+            self.jira.assign_issue(issue=issue,assignee=username)
+            message = ("[~%s], this issue has been automically assigned "
+                "to [~%s].") % (reporter,username)
+            self.jira.add_comment(issue.key, message)
+            self.toggle_watchers("add",issue,watch_list)
+            """
+    
+    def user_with_fewest_issues(self,query,include_resolved=False):
+        """
+        Given a query, return the username of the use with the fewest assigned
+        issues in the result set.
+        
+        """
+        issues = self.jira.search_issues(query)
+        
+        member_count = {}
+
+        for member in members:
+            member_count[member]=0
+
+        # get counts for each dev
+        for issue in issues:
+            index_type = issue.fields.customfield_10500
+            if index_type:
+                index_id = index_type.id
+            else:
+                index_id = 0
+                
+            if issue.fields.assignee:
+                assignee = issue.fields.assignee.key
+            else:
+                assignee = None
+            if assignee in members and not self.label_contains(issue,"wait"):
+                # if the user is set to ignore non-member tickets in their
+                # count, check the indextype
+                if assignee in ignore_nm_counts:
+                    if index_id == '10103': #10103 is the ID for "Member"
+                        member_count[assignee] = member_count[assignee]+1                    
+                else:                    
+                    member_count[assignee] = member_count[assignee]+1
+        
+        member_count_sorted = sorted(member_count.items(), 
+            key=operator.itemgetter(1))
+        username = str(member_count_sorted[0][0])
+        return username
+        
+    def auto_assign_old(self):
         """
         Looks up new INDEXREP issues with an empty assignee and non-agent
         reporter and assigns them to the user in the content-acquisition user 
