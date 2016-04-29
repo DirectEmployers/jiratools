@@ -29,13 +29,13 @@ class Housekeeping():
                             basic_auth=secrets.housekeeping_auth) 
     
         # commands to run
-        #self.content_acquisition_auto_qc()
+        self.content_acquisition_auto_qc()
         self.auto_assign()
-        #self.remind_reporter_to_close()
-        #self.close_resolved() 
-        #self.clear_auto_close_label()
-        #self.resolved_issue_audit()
-        #self.handle_audited_tickets()
+        self.remind_reporter_to_close()
+        self.close_resolved() 
+        self.clear_auto_close_label()
+        self.resolved_issue_audit()
+        self.handle_audited_tickets()
 
     def content_acquisition_auto_qc(self):
         """
@@ -282,27 +282,18 @@ class Housekeeping():
         """        
         # filter 20702 returns member issues that need to auto assigned
         jql_query = self.jira.filter("20702").jql        
-        mem_issues = self.jira.search_issues(jql_query)
-        
-        #filter 21400 returns non-member issues that need to be assigned
-        jql_query = self.jira.filter("21400").jql        
-        nm_issues = self.jira.search_issues(jql_query)
-        
-        #merge the lists so that members are first
-        issues = mem_issues + nm_issues
+        issues = self.jira.search_issues(jql_query)
         
         #filter 21200 returns non-resolved assigned issues
         assigned_issues_query = self.jira.filter("21200").jql
         
         # cycle through each issue and assign it to the user in 
         # content acquisition with the fewest assigned tickets
-        username = self.user_with_fewest_issues('content-acquisition', 
-                                                 assigned_issues_query)
         for issue in issues:
             pass
-            #username = self.user_with_fewest_issues('content-acquisition', 
-            #                                        assigned_issues_query)
-            """
+            username = self.user_with_fewest_issues('content-acquisition', 
+                                                    assigned_issues_query)
+            
             reporter = issue.fields.reporter.key
             watch_list = self.toggle_watchers("remove",issue)
             self.jira.assign_issue(issue=issue,assignee=username)
@@ -310,7 +301,7 @@ class Housekeeping():
                 "to [~%s].") % (reporter,username)
             self.jira.add_comment(issue.key, message)
             self.toggle_watchers("add",issue,watch_list)
-            """
+            
             
         
     def remind_reporter_to_close(self):
@@ -466,7 +457,6 @@ class Housekeeping():
         member_count_sorted = sorted(member_count.items(), 
             key=operator.itemgetter(1))
         # return the username of the user 
-        print member_count_sorted
         return str(member_count_sorted[0][0]) 
 
 Housekeeping()
