@@ -290,7 +290,6 @@ class Housekeeping():
         # cycle through each issue and assign it to the user in 
         # content acquisition with the fewest assigned tickets
         for issue in issues:
-            pass
             username = self.user_with_fewest_issues('content-acquisition', 
                                                     assigned_issues_query)
             
