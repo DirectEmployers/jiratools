@@ -280,7 +280,7 @@ class Housekeeping():
         group with the fewest assigned contect-acquistion tickets. 
 
         """        
-        # filter 20702 returns member issues that need to auto assigned
+        # filter 20702 returns issues that need to auto assigned
         jql_query = self.jira.filter("20702").jql        
         issues = self.jira.search_issues(jql_query)
         
