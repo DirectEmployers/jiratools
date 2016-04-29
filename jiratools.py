@@ -299,8 +299,7 @@ class Housekeeping():
             message = ("[~%s], this issue has been automically assigned "
                 "to [~%s].") % (reporter,username)
             self.jira.add_comment(issue.key, message)
-            self.toggle_watchers("add",issue,watch_list)
-            
+            self.toggle_watchers("add",issue,watch_list)            
             
         
     def remind_reporter_to_close(self):
