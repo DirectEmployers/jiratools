@@ -280,16 +280,9 @@ class Housekeeping():
         group with the fewest assigned contect-acquistion tickets. 
 
         """        
-        # filter 20702 returns member issues that need to auto assigned
+        # filter 20702 returns issues that need to auto assigned
         jql_query = self.jira.filter("20702").jql        
-        mem_issues = self.jira.search_issues(jql_query)
-        
-        #filter 21400 returns non-member issues that need to be assigned
-        jql_query = self.jira.filter("21400").jql        
-        nm_issues = self.jira.search_issues(jql_query)
-        
-        #merge the lists so that members are first
-        issues = mem_issues + nm_issues
+        issues = self.jira.search_issues(jql_query)
         
         #filter 21200 returns non-resolved assigned issues
         assigned_issues_query = self.jira.filter("21200").jql
@@ -297,16 +290,16 @@ class Housekeeping():
         # cycle through each issue and assign it to the user in 
         # content acquisition with the fewest assigned tickets
         for issue in issues:
-            
             username = self.user_with_fewest_issues('content-acquisition', 
                                                     assigned_issues_query)
+            
             reporter = issue.fields.reporter.key
             watch_list = self.toggle_watchers("remove",issue)
             self.jira.assign_issue(issue=issue,assignee=username)
             message = ("[~%s], this issue has been automically assigned "
                 "to [~%s].") % (reporter,username)
             self.jira.add_comment(issue.key, message)
-            self.toggle_watchers("add",issue,watch_list)
+            self.toggle_watchers("add",issue,watch_list)            
             
         
     def remind_reporter_to_close(self):
@@ -451,24 +444,13 @@ class Housekeeping():
 
         # perform the count anew for each ticket
         for issue in issues:
-            index_type = issue.fields.customfield_10500
-            if index_type:
-                index_id = index_type.id
-            else:
-                index_id = 0
-                
             if issue.fields.assignee:
                 assignee = issue.fields.assignee.key
             else:
                 assignee = None
             if assignee in members and not self.label_contains(issue,"wait"):
-                # if the user is set to ignore non-member tickets in their
-                # count, check the indextype
-                if assignee in ignore_nm_counts:
-                    if index_id == '10103': #10103 is the ID for "Member"
-                        member_count[assignee] = member_count[assignee]+1                    
-                else:                    
-                    member_count[assignee] = member_count[assignee]+1
+                member_count[assignee] = member_count[assignee]+1
+                
         #sort the list so that the user with the lowest count is first
         member_count_sorted = sorted(member_count.items(), 
             key=operator.itemgetter(1))
