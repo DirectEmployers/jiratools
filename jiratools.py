@@ -433,7 +433,6 @@ class Housekeeping():
         
         """
         members = self.get_group_members(group)
-        ignore_nm_counts = self.get_group_members('ignore-non-member-counts')
         
         issues = self.jira.search_issues(query)
         
