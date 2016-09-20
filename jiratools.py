@@ -94,9 +94,13 @@ class Housekeeping():
                 except AttributeError:
                     pass
             
-            # capture orignal tick and project
-            original_ticket = issue.fields.summary.split("[")[1].split("]")[0]
-            original_project = original_ticket.split("-")[0]
+            # capture original ticket and project. If it can't be found, default to INDEXREP as the project
+            try:
+                original_ticket = issue.fields.summary.split("[")[1].split("]")[0]
+                original_project = original_ticket.split("-")[0]
+            except IndexError:
+                original_ticket = ""
+                original_project="INDEXREP"
             
             # build the new summary by parsing the audit summary
             indexrep_summary = issue.fields.summary #build the summary
