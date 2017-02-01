@@ -27,7 +27,7 @@ class Housekeeping():
         # open JIRA API Connection
         self.jira = JIRA(options=secrets.options, 
                             basic_auth=secrets.housekeeping_auth) 
-    
+        
         # commands to run
         self.content_acquisition_auto_qc()
         self.auto_assign()
@@ -36,7 +36,8 @@ class Housekeeping():
         self.clear_auto_close_label()
         self.resolved_issue_audit()
         self.handle_audited_tickets()
-
+        
+        
     def content_acquisition_auto_qc(self):
         """
         Takes INDEXREP issues that have been Merged for 30+ minutes and 
@@ -277,33 +278,36 @@ class Housekeeping():
         members = self.jira.group_members(group)
         return members
     
-    def auto_assign(self):
+    def auto_assign(self,project="INDEXREP"):
         """
         Looks up new INDEXREP issues with an empty assignee and non-agent
         reporter and assigns them to the user in the content-acquisition user 
         group with the fewest assigned contect-acquistion tickets. 
 
-        """        
-        # filter 20702 returns issues that need to auto assigned
+        """       
+        
+        # filter 20702 returns INDEXREP issues that need to auto assigned
         jql_query = self.jira.filter("20702").jql        
         issues = self.jira.search_issues(jql_query)
         
-        #filter 21200 returns non-resolved assigned issues
+        #filter 21200 returns non-resolved assigned INDEXREP issues
         assigned_issues_query = self.jira.filter("21200").jql
         
         # cycle through each issue and assign it to the user in 
         # content acquisition with the fewest assigned tickets
         for issue in issues:
+            print issue
             username = self.user_with_fewest_issues('content-acquisition', 
                                                     assigned_issues_query)
-            
+            """
             reporter = issue.fields.reporter.key
             watch_list = self.toggle_watchers("remove",issue)
             self.jira.assign_issue(issue=issue,assignee=username)
             message = ("[~%s], this issue has been automically assigned "
                 "to [~%s].") % (reporter,username)
             self.jira.add_comment(issue.key, message)
-            self.toggle_watchers("add",issue,watch_list)            
+            self.toggle_watchers("add",issue,watch_list) 
+            """
             
         
     def remind_reporter_to_close(self):
@@ -436,9 +440,10 @@ class Housekeeping():
         query: the issues to lookup. Should be a JQL string.
         
         """
+        print "counting..."
         members = self.get_group_members(group)
         
-        issues = self.jira.search_issues(query)
+        issues = self.jira.search_issues(query,maxResults=1000)
         
         member_count = {}
 
@@ -446,11 +451,13 @@ class Housekeeping():
             member_count[member]=0
 
         # perform the count anew for each ticket
+        print len(issues)
         for issue in issues:
             if issue.fields.assignee:
                 assignee = issue.fields.assignee.key
             else:
                 assignee = None
+            print assignee + " - " + str(issue)
             if assignee in members and not self.label_contains(issue,"wait"):
                 member_count[assignee] = member_count[assignee]+1
                 
@@ -458,6 +465,7 @@ class Housekeeping():
         member_count_sorted = sorted(member_count.items(), 
             key=operator.itemgetter(1))
         # return the username of the user 
+        print member_count_sorted
         return str(member_count_sorted[0][0]) 
 
 Housekeeping()
