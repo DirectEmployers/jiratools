@@ -296,7 +296,6 @@ class Housekeeping():
         # cycle through each issue and assign it to the user in 
         # content acquisition with the fewest assigned tickets
         for issue in issues:
-            print issue
             username = self.user_with_fewest_issues('content-acquisition', 
                                                     assigned_issues_query)
             
@@ -439,7 +438,6 @@ class Housekeeping():
         query: the issues to lookup. Should be a JQL string.
         
         """
-        print "counting..."
         members = self.get_group_members(group)
         
         issues = self.jira.search_issues(query,maxResults=1000)
@@ -456,7 +454,6 @@ class Housekeeping():
                 assignee = issue.fields.assignee.key
             else:
                 assignee = None
-            print assignee + " - " + str(issue)
             if assignee in members and not self.label_contains(issue,"wait"):
                 member_count[assignee] = member_count[assignee]+1
                 
@@ -464,7 +461,6 @@ class Housekeeping():
         member_count_sorted = sorted(member_count.items(), 
             key=operator.itemgetter(1))
         # return the username of the user 
-        print member_count_sorted
         return str(member_count_sorted[0][0]) 
 
 Housekeeping()
