@@ -299,7 +299,7 @@ class Housekeeping():
             print issue
             username = self.user_with_fewest_issues('content-acquisition', 
                                                     assigned_issues_query)
-            """
+            
             reporter = issue.fields.reporter.key
             watch_list = self.toggle_watchers("remove",issue)
             self.jira.assign_issue(issue=issue,assignee=username)
@@ -307,7 +307,6 @@ class Housekeeping():
                 "to [~%s].") % (reporter,username)
             self.jira.add_comment(issue.key, message)
             self.toggle_watchers("add",issue,watch_list) 
-            """
             
         
     def remind_reporter_to_close(self):
