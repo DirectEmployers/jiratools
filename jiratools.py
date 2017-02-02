@@ -286,9 +286,15 @@ class Housekeeping():
 
         """       
         
-        # filter 20702 returns INDEXREP issues that need to auto assigned
+        # filter 20702 returns member INDEXREP issues that need to auto assigned
         jql_query = self.jira.filter("20702").jql        
-        issues = self.jira.search_issues(jql_query)
+        mem_issues = self.jira.search_issues(jql_query)
+        
+        #filter 23300 returns free indexing requests (FCA & select INDEXREP tix)
+        jql_query = self.jira.filter("23300").jql
+        free_issues = self.jira.search_issues(jql_query)
+        
+        issues = mem_issues+free_issues
         
         #filter 21200 returns non-resolved assigned INDEXREP issues
         assigned_issues_query = self.jira.filter("21200").jql
@@ -448,7 +454,6 @@ class Housekeeping():
             member_count[member]=0
 
         # perform the count anew for each ticket
-        print len(issues)
         for issue in issues:
             if issue.fields.assignee:
                 assignee = issue.fields.assignee.key
