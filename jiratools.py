@@ -296,22 +296,41 @@ class Housekeeping():
         
         issues = mem_issues+free_issues
         
-        #filter 21200 returns non-resolved assigned INDEXREP issues
-        assigned_issues_query = self.jira.filter("21200").jql
+        #filter 23401 returns non-resolved assigned Member issues
+        member_assigned_issues_query = self.jira.filter("23400").jql
         
-        # cycle through each issue and assign it to the user in 
-        # content acquisition with the fewest assigned tickets
-        for issue in issues:
-            username = self.user_with_fewest_issues('content-acquisition', 
-                                                    assigned_issues_query)
+        #filter 23401 returns non-resolved assigned Free Indexing issues
+        free_assigned_issues_query = self.jira.filter("23401").jql
+        
+        def _assign(issue,username):
+            """
+            Private method for assigning an issue.
+            Inputs:
+            issue: issue to assign
+            username: person to assign the issue
             
+            """
             reporter = issue.fields.reporter.key
             watch_list = self.toggle_watchers("remove",issue)
             self.jira.assign_issue(issue=issue,assignee=username)
             message = ("[~%s], this issue has been automically assigned "
                 "to [~%s].") % (reporter,username)
             self.jira.add_comment(issue.key, message)
-            self.toggle_watchers("add",issue,watch_list) 
+            self.toggle_watchers("add",issue,watch_list)
+        
+        # count and assign member tickets
+        for issue in mem_issues:            
+            username = self.user_with_fewest_issues('content-acquisition', 
+                                                    member_assigned_issues_query)
+            _assign(issue,username)            
+        
+        # count and assign free tickets
+        for issue in free_issues:
+            username = self.user_with_fewest_issues('content-acquisition', 
+                                                    free_assigned_issues_query)
+            _assign(issue,username)
+        
+         
             
         
     def remind_reporter_to_close(self):
@@ -465,7 +484,7 @@ class Housekeeping():
         #sort the list so that the user with the lowest count is first
         member_count_sorted = sorted(member_count.items(), 
             key=operator.itemgetter(1))
-        # return the username of the user 
+        # return the username of the user
         return str(member_count_sorted[0][0]) 
 
 Housekeeping()
