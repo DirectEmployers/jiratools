@@ -45,8 +45,9 @@ class Housekeeping():
         tags the reporter to inform them that the issue is ready for review.
 
         """
-        issues = self.jira.search_issues(
-            'project=INDEXREP and status=Merged and updated<="-30m"')
+        #23700 grabs CA tickets merged 30+ minute ago
+        jql_query = self.jira.filter("23700").jql
+        issues = self.jira.search_issues(jql_query)
         
         for issue in issues:
             reporter = issue.fields.reporter.key
@@ -55,7 +56,8 @@ class Housekeeping():
             771 is the transition ID spedific to this step for this project.
             Anything more generic will need to parse the transitions list.
             """
-            self.jira.transition_issue(issue.key,'771')
+            tran_id = self.get_transition_id(issue,"qc")
+            self.jira.transition_issue(issue.key,tran_id)
             self.jira.add_comment(issue.key, message)
     
     def handle_audited_tickets(self):
@@ -374,7 +376,24 @@ class Housekeeping():
                 "[~%s], this issue has closed automatically.") % reporter
             close_me = self.close_issue(issue)
             self.jira.add_comment(issue.key,message)
-            
+    
+    def get_transition_id(self,issue,key):
+        """
+        Finds the transition id for an issue given a specific search string.
+        Inputs: 
+            key: search string
+            issue: jira issue
+        Returns: transition id or False
+        
+        """
+        trans = self.jira.transitions(issue)
+        tran_id = False
+        for tran in trans:
+            tran_name = tran['name'].lower()
+            if key in tran_name:
+                tran_id = tran['id']
+        return tran_id
+    
     def close_issue(self, issue):
         """
         Closes the issue passed to it with a resolution of fixed.
@@ -384,6 +403,8 @@ class Housekeeping():
         """
         trans = self.jira.transitions(issue)
         success_flag = False
+        #code below is commented until we know the transiton id lookup works
+        """
         for tran in trans:
             tran_name = tran['name'].lower()
             if 'close' in tran_name or 'complete' in tran_name:
@@ -393,6 +414,19 @@ class Housekeeping():
                 except: #open ended, but the JIRAError exception is broken.
                     self.jira.transition_issue(issue,tran['id'])
                 success_flag = True
+        """
+        tran_id = self.get_transition_id(issue,"close")
+        if not tran_id:
+            tran_id = self.get_transition_id(issue,"complete")
+        
+        if tran_id:
+            try:
+                self.jira.transition_issue(issue,tran_id,
+                                           {'resolution':{'id':'1'}})
+            #some close transitions don't have a resolution screen
+            except: #open ended, but the JIRAError exception is broken.
+                self.jira.transition_issue(issue,tran['id'])
+            success_flag = True
         return success_flag
                 
     def clear_auto_close_label(self):
