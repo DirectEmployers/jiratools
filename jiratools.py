@@ -22,8 +22,6 @@ class Housekeeping():
     def __init__(self):
         # class variables
         self.ac_label =  u'auto-close-24-hours'
-        self.audit_delay = '-72h'
-        self.audit_projects = "INDEXREP" #comma delimited project keys
         # open JIRA API Connection
         self.jira = JIRA(options=secrets.options, 
                             basic_auth=secrets.housekeeping_auth) 
@@ -132,25 +130,18 @@ class Housekeeping():
             close_me = self.close_issue(issue.key)
                         
     
-    def resolved_issue_audit(self,delay="",projects=""):
+    def resolved_issue_audit(self):
         """
         TAKES issues that have been resolved from specified projectsfor a set 
         interval and creates a new ticket in AUDIT, closes the INDEXREP ticket, 
         and then assigns it to the audit user specified in the self.qa_auditor role.
         
-        Inputs:
-        :delay:      how long an issue should be resoved before being picked up
-                        by this script. Defaults to class level variable
-        :projects:  which projects are subject to auditing. Defaults to class level
-                        variable
+        Inputs: None
         Returns:    Error message or Nothing
         
         """
-        delay = self.audit_delay if not delay else delay
-        projects = self.audit_projects if not projects else projects
         # get all the issues from projects in the audit list
-        issue_query = 'project in (%s) and status=Resolved and resolutiondate \
-            <="%s"' % (projects,delay)
+        issue_query = self.jira.filter("23800").jql
         issues = self.jira.search_issues(issue_query) 
         
         # get the users who can be assigned audit tickets. This should be just one person
@@ -403,18 +394,6 @@ class Housekeeping():
         """
         trans = self.jira.transitions(issue)
         success_flag = False
-        #code below is commented until we know the transiton id lookup works
-        """
-        for tran in trans:
-            tran_name = tran['name'].lower()
-            if 'close' in tran_name or 'complete' in tran_name:
-                try:
-                    self.jira.transition_issue(issue,tran['id'],{'resolution':{'id':'1'}})
-                #some close transitions don't have a resolution screen
-                except: #open ended, but the JIRAError exception is broken.
-                    self.jira.transition_issue(issue,tran['id'])
-                success_flag = True
-        """
         tran_id = self.get_transition_id(issue,"close")
         if not tran_id:
             tran_id = self.get_transition_id(issue,"complete")
@@ -425,7 +404,7 @@ class Housekeeping():
                                            {'resolution':{'id':'1'}})
             #some close transitions don't have a resolution screen
             except: #open ended, but the JIRAError exception is broken.
-                self.jira.transition_issue(issue,tran['id'])
+                self.jira.transition_issue(issue,tran_id)
             success_flag = True
         return success_flag
                 
