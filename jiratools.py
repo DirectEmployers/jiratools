@@ -77,6 +77,10 @@ class Housekeeping():
             adt_buid=issue.fields.customfield_10502
             #WCID
             adt_wcid=issue.fields.customfield_10501
+            #oldBUID
+            adt_old_buid=issue.fields.customfield_13100
+            #oldWCID
+            adt_old_wcid=issue.fields.customfield_13101
             #Indexing Type
             adt_indexing_type=issue.fields.customfield_10500
             #comments
@@ -124,9 +128,10 @@ class Housekeeping():
             
             # Generate the new issue, then close the audit ticket.    
             new_issue = self.make_new_issue(original_project,"EMPTY",reporter,
-                                                                    indexrep_summary,message,
-                                                                    watcher_list,link_list,adt_buid,
-                                                                    adt_wcid,adt_indexing_type,adt_comments)            
+                                                indexrep_summary,message,
+                                                watcher_list,link_list,adt_buid,                                                
+                                                adt_wcid,adt_old_buid,adt_old_wcid,
+                                                adt_indexing_type,adt_comments)            
             close_me = self.close_issue(issue.key)
                         
     
@@ -159,6 +164,10 @@ class Housekeeping():
             ind_buid=issue.fields.customfield_10502
             #WCID
             ind_wcid=issue.fields.customfield_10501
+            #oldBUID
+            ind_old_buid=issue.fields.customfield_13100
+            #oldWCID
+            ind_old_wcid=issue.fields.customfield_13101
             #Indexing Type
             ind_indexing_type=issue.fields.customfield_10500
             link_list = [issue.key,]
@@ -188,7 +197,7 @@ class Housekeeping():
             # make the audit ticket
             new_issue = self.make_new_issue("ADT",qa_auditor,reporter,
                 adt_summary,message,watcher_list,link_list,ind_buid,
-                ind_wcid,ind_indexing_type)
+                ind_wcid,ind_old_buid,ind_old_wcid,ind_indexing_type)
            
             # close the INDEXREP ticket
             close_me = self.close_issue(issue.key)
@@ -199,8 +208,10 @@ class Housekeeping():
             
         
     def make_new_issue(self,project,issue_assignee,issue_reporter,summary,
-                                      description="",watchers=[],links=[],buid="",wcid="",
-                                      indexing_type="",comments=[],issuetype="Task"):
+                                      description="",watchers=[],links=[],
+                                      buid="",wcid="",old_buid="",old_wcid="",
+                                      indexing_type="",comments=[],
+                                      issuetype="Task"):
         """
         Creates a new issue with the given parameters.
         Inputs:
@@ -216,6 +227,8 @@ class Housekeeping():
             :issuetype: the type of issue to create. Defaults to type.
             :buid: business unit - custom field 10502
             :wcid: wrapping company id - custom field 10501
+            :old_buid: old business unit - custom field 13100
+            :old_wcid: old wrapping company id - custom field 13101
             :indexing_type: the indexing type - custom field 10500
             :comments: list dictionaries of comments and authors to auto add.
         Returns: Jira Issue Object
@@ -248,6 +261,10 @@ class Housekeeping():
             new_issue.update(fields={'customfield_10501':wcid})
         if indexing_type:
             new_issue.update(fields={'customfield_10500':{'value':indexing_type.value}})
+        if old_buid:
+            new_issue.update(fields={'customfield_13100':old_buid})
+        if old_wcid:
+            new_issue.update(fields={'customfield_13101':old_wcid})
         
         # add comments
         quoted_comments = ""
