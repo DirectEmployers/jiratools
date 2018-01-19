@@ -151,6 +151,7 @@ class Housekeeping():
         
         # get the users who can be assigned audit tickets. This should be just one person
         qa_members = self.get_group_members("issue audits")
+        
         if len(qa_members)==1:
             qa_auditor=qa_members.keys()[0]
         else:
