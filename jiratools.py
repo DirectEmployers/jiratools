@@ -149,15 +149,6 @@ class Housekeeping():
         issue_query = self.jira.filter("23800").jql
         issues = self.jira.search_issues(issue_query) 
         
-        # get the users who can be assigned audit tickets. This should be just one person
-        qa_members = self.get_group_members("issue audits")
-        
-        if len(qa_members)==1:
-            qa_auditor=qa_members.keys()[0]
-        else:
-            # for now, throw an error. Later, assign to user with fewer ADT tickets
-            # this will also mean turning the code in auto_assign into a method (DRY)
-            return "Error: There is more than one possible auditor"
         
         # cycle through them and create a new ADT ticket for each 
         for issue in issues:
@@ -193,8 +184,14 @@ class Housekeeping():
             try:
                 original_assignee = issue.fields.assignee.key
             except AttributeError:
-                original_assignee="EMPTY"         
-           
+                original_assignee="EMPTY"      
+                
+            # get the users who can be assigned audit tickets, then select the 
+            # one with fewest assigned tickets
+            assigned_audit_tasks_query = self.jira.filter("24922").jql
+            qa_auditor = self.user_with_fewest_issues('issue audits', 
+                                                      assigned_audit_tasks_query)
+            
             # make the audit ticket
             new_issue = self.make_new_issue("ADT",qa_auditor,reporter,
                 adt_summary,message,watcher_list,link_list,ind_buid,
