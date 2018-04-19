@@ -173,6 +173,13 @@ class Housekeeping():
             # to prevent read errors later.
             adt_summary = issue.fields.summary.replace("[","(").replace("]",")")
             adt_summary = 'compliance audit - %s [%s]' % (adt_summary,issue.key)
+            
+            # get the users who can be assigned audit tickets, then select the 
+            # one with fewest assigned tickets
+            assigned_audit_tasks_query = self.jira.filter("24922").jql
+            qa_auditor = self.user_with_fewest_issues('issue audits', 
+                                                      assigned_audit_tasks_query)
+            
             # build the description
             message = '[~%s], issue %s is ready to audit.' % (qa_auditor, issue.key)
             
@@ -185,12 +192,6 @@ class Housekeeping():
                 original_assignee = issue.fields.assignee.key
             except AttributeError:
                 original_assignee="EMPTY"      
-                
-            # get the users who can be assigned audit tickets, then select the 
-            # one with fewest assigned tickets
-            assigned_audit_tasks_query = self.jira.filter("24922").jql
-            qa_auditor = self.user_with_fewest_issues('issue audits', 
-                                                      assigned_audit_tasks_query)
             
             # make the audit ticket
             new_issue = self.make_new_issue("ADT",qa_auditor,reporter,
