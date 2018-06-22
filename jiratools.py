@@ -496,7 +496,8 @@ class Housekeeping():
 
         """
         return any(search_string in label for label in issue.fields.labels) 
-        
+  
+  
     def check_for_text(self,issue,text_list):        
         """
         Internal method that searches the summary and description of an issue for 
@@ -507,7 +508,7 @@ class Housekeeping():
         :text_list: strings to checked for
 
         Returns:
-        True|False  True if any of the vlaues in text_list exist.
+        True|False  True if any of the values in text_list exist.
 
         """
         string_exists = False
@@ -526,9 +527,7 @@ class Housekeeping():
                 string_exists = True
         
         return string_exists
-            
-        
-        #return any(search_string in label for label in issue.fields.labels) 
+         
     
     def user_with_fewest_issues(self,group,query):
         """
