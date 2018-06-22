@@ -149,19 +149,27 @@ class Housekeeping():
         issue_query = self.jira.filter("23800").jql
         issues = self.jira.search_issues(issue_query) 
         
+        #build a list of all users in the MS & MD groups
+        member_svc = self.get_group_members("member-services")            
+        member_dev = self.get_group_members("membership-development")
+        member_all = []
+        for user in member_svc:
+            member_all.append(user) #only need the user names, not the meta data
+        for user in member_dev:
+            member_all.append(user)
+        member_all = set(member_all) #de-dupe
+        
         
         # cycle through them and create a new ADT ticket for each 
         for issue in issues:
-            #BUID
-            ind_buid=issue.fields.customfield_10502
-            #WCID
-            ind_wcid=issue.fields.customfield_10501
-            #oldBUID
-            ind_old_buid=issue.fields.customfield_13100
-            #oldWCID
-            ind_old_wcid=issue.fields.customfield_13101
-            #Indexing Type
-            ind_indexing_type=issue.fields.customfield_10500
+            # capture issue fields
+            ind_buid=issue.fields.customfield_10502 #BUID            
+            ind_wcid=issue.fields.customfield_10501 #WCID            
+            ind_old_buid=issue.fields.customfield_13100 #oldBUID            
+            ind_old_wcid=issue.fields.customfield_13101 #oldWCID            
+            ind_indexing_type=issue.fields.customfield_10500 #Indexing Type            
+            reporter = issue.fields.reporter.key #Reporter
+            
             link_list = [issue.key,]
             for link in issue.fields.issuelinks: # grab the rest of links
                 try:
@@ -174,11 +182,18 @@ class Housekeeping():
             adt_summary = issue.fields.summary.replace("[","(").replace("]",")")
             adt_summary = 'compliance audit - %s [%s]' % (adt_summary,issue.key)
             
-            # get the users who can be assigned audit tickets, then select the 
-            # one with fewest assigned tickets
+            # check reporter to see if special consideration is needed
+            # if reporter is not MS or MD, or it's a new member, assign to audit lead.
+            new_member_setup = self.check_for_text(issue,["new member setup","setup member"])
             assigned_audit_tasks_query = self.jira.filter("24922").jql
-            qa_auditor = self.user_with_fewest_issues('issue audits', 
+            if reporter not in member_all or new_member_setup:
+                qa_auditor = self.user_with_fewest_issues('issue audits lead', 
                                                       assigned_audit_tasks_query)
+            else:
+                # get the users who can be assigned audit tickets, then select the 
+                # one with fewest assigned tickets                
+                qa_auditor = self.user_with_fewest_issues('issue audits', 
+                                                          assigned_audit_tasks_query)
             
             # build the description
             message = '[~%s], issue %s is ready to audit.' % (qa_auditor, issue.key)
@@ -187,7 +202,7 @@ class Housekeeping():
             watcher_list = []
             for w in self.jira.watchers(issue).watchers:
                 watcher_list.append(w.key)
-            reporter = issue.fields.reporter.key
+            
             try:
                 original_assignee = issue.fields.assignee.key
             except AttributeError:
@@ -279,7 +294,7 @@ class Housekeeping():
     # method to transistion audit ticket    
     def get_group_members(self, group_name):
         """
-        Returns the members of a 
+        Returns the members of a group as a list
         """
         group = self.jira.groups(
             query=group_name
@@ -480,7 +495,40 @@ class Housekeeping():
         True|False  True if search_string exists in any label.
 
         """
-        return any(search_string in label for label in issue.fields.labels)    
+        return any(search_string in label for label in issue.fields.labels) 
+        
+    def check_for_text(self,issue,text_list):        
+        """
+        Internal method that searches the summary and description of an issue for 
+        a given list of strings.
+
+        Inputs:
+        :issue: Jira issue object that is being checked
+        :text_list: strings to checked for
+
+        Returns:
+        True|False  True if any of the vlaues in text_list exist.
+
+        """
+        string_exists = False
+        if issue.fields.summary:
+            summary = issue.fields.summary
+        else:
+            summary = ""
+            
+        if issue.fields.description:
+            description = issue.fields.description
+        else:
+            description = ""
+            
+        for text in text_list:
+            if text in summary or text in description:
+                string_exists = True
+        
+        return string_exists
+            
+        
+        #return any(search_string in label for label in issue.fields.labels) 
     
     def user_with_fewest_issues(self,group,query):
         """
