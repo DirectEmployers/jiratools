@@ -567,8 +567,10 @@ class Housekeeping():
         member_count_sorted = sorted(member_count.items(), 
             key=operator.itemgetter(1))
         
-        # prevent assignment to a user in the blacklist
-        while str(member_count_sorted[0][0]) in blacklist:
+        # prevent assignment to a user in the blacklist, so long as there are
+        # at least 2 available users
+        while (str(member_count_sorted[0][0]) in blacklist and 
+            len(member_count_sorted)>1):
             del member_count_sorted[0]
         
         # return the username of the user
