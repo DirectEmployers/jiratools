@@ -188,12 +188,14 @@ class Housekeeping():
             assigned_audit_tasks_query = self.jira.filter("24922").jql
             if reporter not in member_all or new_member_setup:
                 qa_auditor = self.user_with_fewest_issues('issue audits lead', 
-                                                      assigned_audit_tasks_query)
+                                                      assigned_audit_tasks_query,
+                                                      [reporter])
             else:
                 # get the users who can be assigned audit tickets, then select the 
                 # one with fewest assigned tickets                
                 qa_auditor = self.user_with_fewest_issues('issue audits', 
-                                                          assigned_audit_tasks_query)
+                                                          assigned_audit_tasks_query,
+                                                          [reporter])
             
             # build the description
             message = '[~%s], issue %s is ready to audit.' % (qa_auditor, issue.key)
@@ -529,7 +531,7 @@ class Housekeeping():
         return string_exists
          
     
-    def user_with_fewest_issues(self,group,query):
+    def user_with_fewest_issues(self,group,query,blacklist=[]):
         """
         Given a query, return the username of the use with the fewest assigned
         issues in the result set.
@@ -537,6 +539,7 @@ class Housekeeping():
         Inputs:
         group: the group of users for which to count issues.
         query: the issues to lookup. Should be a JQL string.
+        blacklist: (optional) list of inelligible users 
         
         """
         members = self.get_group_members(group)
@@ -560,6 +563,11 @@ class Housekeeping():
         #sort the list so that the user with the lowest count is first
         member_count_sorted = sorted(member_count.items(), 
             key=operator.itemgetter(1))
+        
+        # prevent assignment to a user in the blacklist
+        while str(member_count_sorted[0][0]) in blacklist:
+            del member_count_sorted[0]
+        
         # return the username of the user
         return str(member_count_sorted[0][0]) 
 
