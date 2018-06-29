@@ -152,10 +152,13 @@ class Housekeeping():
         #build a list of all users in the MS & MD groups
         member_svc = self.get_group_members("member-services")            
         member_dev = self.get_group_members("membership-development")
+        member_aud = self.get_group_members("issue audits")
         member_all = []
         for user in member_svc:
             member_all.append(user) #only need the user names, not the meta data
         for user in member_dev:
+            member_all.append(user)
+        for user in member_aud:
             member_all.append(user)
         member_all = set(member_all) #de-dupe
         
