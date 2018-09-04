@@ -342,6 +342,17 @@ class Housekeeping():
             reporter = issue.fields.reporter.key
             watch_list = self.toggle_watchers("remove",issue)
             self.jira.assign_issue(issue=issue,assignee=username)
+            
+            # if the reporter is in free-index-default group, and indexing type
+            # is not set, default indexing type to free (10100). Otherwise, 
+            # default to member. In all cases, no change if it's already set
+            free_index_mem = self.get_group_members("free-index-default")
+            if issue.fields.customfield_10500 == None:
+                if reporter in free_index_mem:
+                    issue.update({"customfield_10500":{"id":"10100"}}) #free
+                else:
+                    issue.update({"customfield_10500":{"id":"10103"}}) #member
+                    
             message = ("[~%s], this issue has been automically assigned "
                 "to [~%s].") % (reporter,username)
             self.jira.add_comment(issue.key, message)
