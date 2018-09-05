@@ -11,7 +11,7 @@ from jira.client import JIRA
 import logging
 import operator
 import secrets
-
+import settings
 
 class Housekeeping():
     """
@@ -187,7 +187,8 @@ class Housekeeping():
             
             # check reporter to see if special consideration is needed
             # if reporter is not MS or MD, or it's a new member, assign to audit lead.
-            new_member_setup = self.check_for_text(issue,["new member setup","setup member"])
+            new_member_setup = self.check_for_text(issue,
+                                                   settings.member_setup_strs)
             assigned_audit_tasks_query = self.jira.filter("24922").jql
             if reporter not in member_all or new_member_setup:
                 qa_auditor = self.user_with_fewest_issues('issue audits lead', 
