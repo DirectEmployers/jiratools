@@ -531,7 +531,6 @@ class Housekeeping():
 
         """
         string_exists = False
-        text = text.lower()
         if issue.fields.summary:
             summary = issue.fields.summary.lower()
         else:
@@ -543,6 +542,7 @@ class Housekeeping():
             description = ""
             
         for text in text_list:
+            text = text.lower()
             if text in summary or text in description:
                 string_exists = True
         
