@@ -519,7 +519,8 @@ class Housekeeping():
     def check_for_text(self,issue,text_list):        
         """
         Internal method that searches the summary and description of an issue for 
-        a given list of strings.
+        a given list of strings. Match is non-case sensative, and converts 
+        everything to lower case before checking for a match.
 
         Inputs:
         :issue: Jira issue object that is being checked
@@ -531,17 +532,17 @@ class Housekeeping():
         """
         string_exists = False
         if issue.fields.summary:
-            summary = issue.fields.summary
+            summary = issue.fields.summary.lower()
         else:
             summary = ""
             
         if issue.fields.description:
-            description = issue.fields.description
+            description = issue.fields.description.lower()
         else:
             description = ""
             
         for text in text_list:
-            if text in summary or text in description:
+            if text.lower() in summary or text in description:
                 string_exists = True
         
         return string_exists
