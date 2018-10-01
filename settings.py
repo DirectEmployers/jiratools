@@ -4,5 +4,6 @@ member_setup_strs=[
     "setup member",
     "set up member",
     "set up new member",
-    "new membership set up"
+    "new membership set up",
+    "new member set up"
     ]
