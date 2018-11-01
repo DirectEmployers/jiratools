@@ -305,9 +305,6 @@ class Housekeeping():
         """
         Returns the members of a group as a list
         """
-        """group = self.jira.groups(
-            query=group_name
-            )['groups'][0]['name']"""
         group = self.jira.groups(query=group_name).pop()
         members = self.jira.group_members(group)
         return members
