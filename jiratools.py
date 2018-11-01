@@ -48,8 +48,6 @@ class Housekeeping():
         issues = self.jira.search_issues(jql_query)
 
         for issue in issues:
-            #print issue
-            #print issue.fields.key
             reporter = issue.fields.reporter.key
             message = '[~%s], this issue is ready for QC.' % reporter
             """
@@ -256,7 +254,6 @@ class Housekeeping():
         Returns: Jira Issue Object
 
         """
-        print issue_assignee
         issue_dict = {
             'project':{'key':project},
             'summary': summary,
