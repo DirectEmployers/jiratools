@@ -28,6 +28,7 @@ class Housekeeping():
 
         # commands to run
         self.content_acquisition_auto_qc()
+        self.requeue_free_indexing()
         self.auto_assign()
         self.remind_reporter_to_close()
         self.close_resolved()
@@ -225,6 +226,28 @@ class Housekeeping():
             # add comment to indexrep ticket
             link_back_comment = "This issue has been closed. The audit ticket is %s" % new_issue
             self.jira.add_comment(issue.key, link_back_comment)
+
+
+    def requeue_free_indexing(self):
+        """
+        Takes a list of old FCA tickets, and clears the assignee fields in order to
+        allow it to be reassigned.
+
+        Inputs: None
+        Returns: Nothing
+
+        """
+        # filter 24929 returns issues that are stale and need reassigned
+        issue_query = self.jira.filter("24929").jql
+        issues = self.jira.search_issues(issue_query)
+        # itirate issues and set assignee to empty. This will allow
+        # auto assignment to set the assignee.
+        for issue in issues:
+            #check for wait in label
+            wait_label = self.label_contains(issue,"wait")
+            # if no wait label, clear the assignee so it can be re-autoassigned
+            if (not wait_label):
+                issue.update(assignee={'name':""})
 
 
     def make_new_issue(self,project,issue_assignee,issue_reporter,summary,
