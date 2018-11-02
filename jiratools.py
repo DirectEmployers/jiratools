@@ -237,7 +237,7 @@ class Housekeeping():
         Returns: Nothing
 
         """
-        # get issues
+        # filter 24929 returns issues that are stale and need reassigned
         issue_query = self.jira.filter("24929").jql
         issues = self.jira.search_issues(issue_query)
         # itirate issues and set assignee to empty. This will allow
