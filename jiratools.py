@@ -230,7 +230,8 @@ class Housekeeping():
 
     def requeue_free_indexing(self):
         """
-        Takes a list of old FCA tickets, and clears the assignee fields in order to allow it to be reassigned.
+        Takes a list of old FCA tickets, and clears the assignee fields in order to
+        allow it to be reassigned.
 
         Inputs: None
         Returns: Nothing
@@ -239,7 +240,8 @@ class Housekeeping():
         # get issues
         issue_query = self.jira.filter("24929").jql
         issues = self.jira.search_issues(issue_query)
-        #itirate issues and set assignee to empty. This will allow auto assignment to set the assignee.
+        # itirate issues and set assignee to empty. This will allow
+        # auto assignment to set the assignee.
         for issue in issues:
             #check for wait in label
             wait_label = self.label_contains(issue,"wait")
@@ -317,7 +319,6 @@ class Housekeeping():
             self.jira.add_comment(new_issue,quoted_comments)
 
         return new_issue
-
 
     # method to transistion audit ticket
     def get_group_members(self, group_name):
