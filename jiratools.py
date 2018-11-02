@@ -302,7 +302,7 @@ class Housekeeping():
         """
         Returns the members of a group as a list
         """
-        group = self.jira.groups(query=group_name).pop()
+        group = self.jira.groups(query=group_name)[0]
         members = self.jira.group_members(group)
         return members
 
@@ -560,7 +560,6 @@ class Housekeeping():
 
         """
         members = self.get_group_members(group)
-
         issues = self.jira.search_issues(query,maxResults=1000)
 
         member_count = {}
