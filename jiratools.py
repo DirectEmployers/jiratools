@@ -44,9 +44,8 @@ class Housekeeping():
         tags the reporter to inform them that the issue is ready for review.
 
         """
-        #23700 grabs CA tickets merged 30+ minute ago
-        jql_query = self.jira.filter("23700").jql
-        issues = self.jira.search_issues(jql_query)
+        # get CA tickets merged 30+ minute ago
+        issues = self.get_issues("auto_qc")
 
         for issue in issues:
             reporter = issue.fields.reporter.key
@@ -147,8 +146,7 @@ class Housekeeping():
 
         """
         # get all the issues from projects in the audit list
-        issue_query = self.jira.filter("23800").jql
-        issues = self.jira.search_issues(issue_query)
+        issues = self.get_issues("audit_list")
 
         #build a list of all users in the MS & MD groups
         member_svc = self.get_group_members("member-services")
@@ -190,7 +188,7 @@ class Housekeeping():
             # if reporter is not MS or MD, or it's a new member, assign to audit lead.
             new_member_setup = self.check_for_text(issue,
                                                    settings.member_setup_strs)
-            assigned_audit_tasks_query = self.jira.filter("24922").jql
+            assigned_audit_tasks_query = self.get_issues("assigned_audits",True)
             if reporter not in member_all or new_member_setup:
                 qa_auditor = self.user_with_fewest_issues('issue audits lead',
                                                       assigned_audit_tasks_query,
@@ -237,9 +235,9 @@ class Housekeeping():
         Returns: Nothing
 
         """
-        # filter 24929 returns issues that are stale and need reassigned
-        issue_query = self.jira.filter("24929").jql
-        issues = self.jira.search_issues(issue_query)
+        # get issues that are stale and need reassigned
+        issues = self.get_issues("stale_free")
+
         # itirate issues and set assignee to empty. This will allow
         # auto assignment to set the assignee.
         for issue in issues:
@@ -337,21 +335,19 @@ class Housekeeping():
 
         """
 
-        # filter 20702 returns member INDEXREP issues that need to auto assigned
-        jql_query = self.jira.filter("20702").jql
-        mem_issues = self.jira.search_issues(jql_query)
+        # get member INDEXREP issues that need to auto assigned
+        mem_issues = self.get_issues("member_auto_assign")
 
-        #filter 23300 returns free indexing requests (FCA & select INDEXREP tix)
-        jql_query = self.jira.filter("23300").jql
-        free_issues = self.jira.search_issues(jql_query)
+        # get free indexing requests
+        free_issues = self.get_issues("free_auto_assign")
 
         issues = mem_issues+free_issues
 
-        #filter 23401 returns non-resolved assigned Member issues
-        member_assigned_issues_query = self.jira.filter("23400").jql
+        # get non-resolved assigned Member issues
+        member_assigned_issues_query = self.get_issues("member_open_issues",True)
 
-        #filter 23401 returns non-resolved assigned Free Indexing issues
-        free_assigned_issues_query = self.jira.filter("23401").jql
+        # get non-resolved assigned Free Indexing issues
+        free_assigned_issues_query = self.get_issues("free_open_issues",True)
 
         def _assign(issue,username):
             """
@@ -393,8 +389,6 @@ class Housekeeping():
             username = self.user_with_fewest_issues('content-acquisition',
                                                     free_assigned_issues_query)
             _assign(issue,username)
-
-
 
 
     def remind_reporter_to_close(self):
@@ -611,5 +605,29 @@ class Housekeeping():
 
         # return the username of the user
         return str(member_count_sorted[0][0])
+
+
+    def get_issues(self,filter_key,return_jql=False):
+        """
+        Returns issues found using a jira filter.
+
+        Inputs:
+            :filter_key:    the dict key for the filter in settings
+            :return_jql:    flag to return JQL instead on issues
+
+        Returns:
+            :issues:    Jira Issues object (default) or JQL string
+
+        """
+        filter_id = secrets.jira_filters[filter_key]
+        jql_query = self.jira.filter(filter_id).jql
+        if return_jql:
+            # some functionality needs the JQL instead of an issue list
+            # notably the method self.user_with_fewest_issues
+            return jql_query
+        else:
+            issues = self.jira.search_issues(jql_query)
+            return issues
+
 
 Housekeeping()
