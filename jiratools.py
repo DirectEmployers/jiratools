@@ -289,7 +289,10 @@ class Housekeeping():
 
         # add watchers to audit ticket (reporter, assignee, wacthers from indexrep ticket)
         for watcher in watchers:
-            self.jira.add_watcher(new_issue,watcher)
+            try:
+                self.jira.add_watcher(new_issue,watcher)
+            except:
+                pass
 
         # link the audit ticket back to indexrep ticket
         for link in links:
