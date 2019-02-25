@@ -400,11 +400,8 @@ class Housekeeping():
         change. Notifies the reporter it will be closed in 24 hours and adds a
         label to the issue that is used as a lookup key by the close method.
 
-        """
-        issues = self.jira.search_issues(
-            'resolution != EMPTY AND \
-            status not in (closed, "Quality Control", Reopened, Merged, open) \
-            AND updated <= -13d and project not in (INDEXREP)')
+        """        
+        issues = self.get_issues("remind_close_issues")
         for issue in issues:
             reporter = issue.fields.reporter.key
             message = (
@@ -423,12 +420,7 @@ class Housekeeping():
         with the auditing process.
 
         """
-        issues = self.jira.search_issues(
-            'resolution != EMPTY AND \
-            status not in (closed, "Quality Control", Reopened, Merged, open, \
-            passed,staged) AND project not in (INDEXREP) \
-            AND updated <= -24h \
-            AND labels in (auto-close-24-hours)')
+        issues = self.get_issues("auto_close_issues")
         for issue in issues:
             reporter = issue.fields.reporter.key
             message = (
