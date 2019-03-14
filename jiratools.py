@@ -389,7 +389,7 @@ class Housekeeping():
 
         # count and assign free tickets
         for issue in free_issues:
-            username = self.user_with_fewest_issues('content-acquisition',
+            username = self.user_with_fewest_issues('content-acquisition-free',
                                                     free_assigned_issues_query)
             _assign(issue,username)
 
@@ -400,7 +400,7 @@ class Housekeeping():
         change. Notifies the reporter it will be closed in 24 hours and adds a
         label to the issue that is used as a lookup key by the close method.
 
-        """        
+        """
         issues = self.get_issues("remind_close_issues")
         for issue in issues:
             reporter = issue.fields.reporter.key
