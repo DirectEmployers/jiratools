@@ -373,7 +373,6 @@ class Housekeeping():
             self.jira.add_comment(issue.key, message)
             self.toggle_watchers("add",issue,watch_list)
 
-
         auto_assign_dicts = [
             {
                 "issue_list": mem_issues,
@@ -394,9 +393,7 @@ class Housekeeping():
                 "issue_list": se_issues,
                 "assigned_list": se_assigned_issues_query,
                 "assignee_group": "se-assignees",
-            }
-
-        ]
+            }]
 
         for list in auto_assign_dicts:
             for issue in list["issue_list"]:
