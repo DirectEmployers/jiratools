@@ -337,20 +337,35 @@ class Housekeeping():
         group with the fewest assigned contect-acquistion tickets.
 
         """
+        #make this project agnostic
 
+
+        # add switch for project
+
+        """ this needs to be a method to build the issue list and return is as an object"""
         # get member INDEXREP issues that need to auto assigned
         mem_issues = self.get_issues("member_auto_assign")
 
         # get free indexing requests
         free_issues = self.get_issues("free_auto_assign")
 
-        issues = mem_issues+free_issues
+        # get unassigned member engagement issues
+        mer_issues = self.get_issues("mer_auto_assign")
+
+        # get unassigned sales engineering issues
+        se_issues = self.get_issues("se_auto_assign")
 
         # get non-resolved assigned Member issues
-        member_assigned_issues_query = self.get_issues("member_open_issues",True)
+        member_assigned_issues_query = self.get_issues("member_assigned_issues",True)
 
         # get non-resolved assigned Free Indexing issues
-        free_assigned_issues_query = self.get_issues("free_open_issues",True)
+        free_assigned_issues_query = self.get_issues("free_assigned_issues",True)
+
+        # get non-resolved member enagement issues
+        mer_assigned_issues_query = self.get_issues("mer_assigned_issues",True)
+
+        # get non-resolved sales engineering issues
+        se_assigned_issues_query = self.get_issues("se_assigned_issues",True)
 
         def _assign(issue,username):
             """
@@ -365,35 +380,57 @@ class Housekeeping():
             watch_list = self.toggle_watchers("remove",issue)
             self.jira.assign_issue(issue=issue,assignee=username)
 
-            # if the reporter is in free-index-default group, and indexing type
-            # is not set, default indexing type to free (10100). Otherwise,
-            # default to member. In all cases, no change if it's already set
-            free_index_mem = self.get_group_members("free-index-default")
-            if issue.fields.customfield_10500 == None:
-                if reporter in free_index_mem or project=="FCA":
-                    # if the project is FCA, then it should always be free
-                    issue.update({"customfield_10500":{"id":"10100"}}) #free
-                else:
-                    issue.update({"customfield_10500":{"id":"10103"}}) #member
-
             message = ("[~%s], this issue has been automically assigned "
                 "to [~%s].") % (reporter,username)
             self.jira.add_comment(issue.key, message)
             self.toggle_watchers("add",issue,watch_list)
 
-        # count and assign member tickets
-        for issue in mem_issues:
-            username = self.user_with_fewest_issues('content-acquisition',
-                                                    member_assigned_issues_query)
-            _assign(issue,username)
 
-        # count and assign free tickets
-        for issue in free_issues:
-            username = self.user_with_fewest_issues('content-acquisition-free',
-                                                    free_assigned_issues_query)
-            _assign(issue,username)
+        auto_assign_dicts = [
+            {
+                "issue_list": mem_issues,
+                "assigned_list": member_assigned_issues_query,
+                "assignee_group": "content-acquisition",
+            },
+            {
+                "issue_list": free_issues,
+                "assigned_list": free_assigned_issues_query,
+                "assignee_group": "content-acquisition-free",
+            },
+            {
+                "issue_list": mer_issues,
+                "assigned_list": mer_assigned_issues_query,
+                "assignee_group": "mer-assignees",
+            },
+            {
+                "issue_list": se_issues,
+                "assigned_list": se_assigned_issues_query,
+                "assignee_group": "se-assignees",
+            }
 
+        ]
 
+        for list in auto_assign_dicts:
+            for issue in list["issue_list"]:
+                username = self.user_with_fewest_issues(list["assignee_group"],
+                                                        list["assigned_list"])
+
+                # set indexing type to member for member tickets
+                if list["issue_list"]==mem_issues:
+                    issue.update({"customfield_10500":{"id":"10103"}})
+
+                # set the indexing type to free if the reporter is in the list
+                # of users who default to free
+                if list["issue_list"]==free_issues:
+                    free_index_mem = self.get_group_members("free-index-default")
+                    if issue.fields.reporter.key in free_index_mem:
+                        issue.update({"customfield_10500":{"id":"10100"}}) #free
+                    else: #default is member otherwise
+                        issue.update({"customfield_10500":{"id":"10103"}})
+
+                _assign(issue,username)
+
+        
     def remind_reporter_to_close(self):
         """
         Comments on all non-closed resolved issues that are 13 days without a
