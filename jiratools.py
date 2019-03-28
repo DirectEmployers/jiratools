@@ -337,33 +337,21 @@ class Housekeeping():
         group with the fewest assigned contect-acquistion tickets.
 
         """
-        #make this project agnostic
-
-
-        # add switch for project
-
-        """ this needs to be a method to build the issue list and return is as an object"""
         # get member INDEXREP issues that need to auto assigned
         mem_issues = self.get_issues("member_auto_assign")
-
         # get free indexing requests
         free_issues = self.get_issues("free_auto_assign")
-
         # get unassigned member engagement issues
         mer_issues = self.get_issues("mer_auto_assign")
-
         # get unassigned sales engineering issues
         se_issues = self.get_issues("se_auto_assign")
 
         # get non-resolved assigned Member issues
         member_assigned_issues_query = self.get_issues("member_assigned_issues",True)
-
         # get non-resolved assigned Free Indexing issues
         free_assigned_issues_query = self.get_issues("free_assigned_issues",True)
-
         # get non-resolved member enagement issues
         mer_assigned_issues_query = self.get_issues("mer_assigned_issues",True)
-
         # get non-resolved sales engineering issues
         se_assigned_issues_query = self.get_issues("se_assigned_issues",True)
 
@@ -430,7 +418,7 @@ class Housekeeping():
 
                 _assign(issue,username)
 
-        
+
     def remind_reporter_to_close(self):
         """
         Comments on all non-closed resolved issues that are 13 days without a
