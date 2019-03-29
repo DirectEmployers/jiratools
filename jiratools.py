@@ -395,18 +395,18 @@ class Housekeeping():
                 "assignee_group": "se-assignees",
             }]
 
-        for list in auto_assign_dicts:
-            for issue in list["issue_list"]:
-                username = self.user_with_fewest_issues(list["assignee_group"],
-                                                        list["assigned_list"])
+        for auto_assign_dict in auto_assign_dicts:
+            for issue in auto_assign_dict["issue_list"]:
+                username = self.user_with_fewest_issues(auto_assign_dict["assignee_group"],
+                                                        auto_assign_dict["assigned_list"])
 
                 # set indexing type to member for member tickets
-                if list["issue_list"]==mem_issues:
+                if auto_assign_dict["issue_list"]==mem_issues:
                     issue.update({"customfield_10500":{"id":"10103"}})
 
                 # set the indexing type to free if the reporter is in the list
                 # of users who default to free
-                if list["issue_list"]==free_issues:
+                if auto_assign_dict["issue_list"]==free_issues:
                     free_index_mem = self.get_group_members("free-index-default")
                     if issue.fields.reporter.key in free_index_mem:
                         issue.update({"customfield_10500":{"id":"10100"}}) #free
