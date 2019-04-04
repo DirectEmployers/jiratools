@@ -388,6 +388,7 @@ class Housekeeping():
                 "issue_list": mer_issues,
                 "assigned_list": mer_assigned_issues_query,
                 "assignee_group": "mer-assignees",
+                "watch_list":"mer-auto-watch",
             },
             {
                 "issue_list": se_issues,
@@ -414,7 +415,10 @@ class Housekeeping():
                         issue.update({"customfield_10500":{"id":"10103"}})
 
                 _assign(issue,username)
-
+                # if the dict object has a watch list item, add default watchers
+                if "watch_list" in auto_assign_dict:
+                    watchers = self.get_group_members(auto_assign_dict["watch_list"])
+                    self.toggle_watchers("add",issue,watchers)
 
     def remind_reporter_to_close(self):
         """
@@ -525,10 +529,10 @@ class Housekeeping():
         if action=="remove":
             issue_watchers = self.jira.watchers(issue).watchers
             for issue_watcher in issue_watchers:
-                self.jira.remove_watcher(issue,issue_watcher.name)
+                self.jira.remove_watcher(issue,issue_watcher)
         else:
             for old_watcher in watch_list:
-                self.jira.add_watcher(issue,old_watcher.name)
+                self.jira.add_watcher(issue,old_watcher)
             issue_watchers = self.jira.watchers(issue).watchers
         return issue_watchers
 
