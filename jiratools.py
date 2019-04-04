@@ -364,14 +364,11 @@ class Housekeeping():
 
             """
             reporter = issue.fields.reporter.key
-            project = issue.key.split("-")[0]
-            watch_list = self.toggle_watchers("remove",issue)
             self.jira.assign_issue(issue=issue,assignee=username)
 
             message = ("[~%s], this issue has been automically assigned "
                 "to [~%s].") % (reporter,username)
             self.jira.add_comment(issue.key, message)
-            self.toggle_watchers("add",issue,watch_list)
 
         auto_assign_dicts = [
             {
@@ -414,11 +411,13 @@ class Housekeeping():
                     else: #default is member otherwise
                         issue.update({"customfield_10500":{"id":"10103"}})
 
-                _assign(issue,username)
                 # if the dict object has a watch list item, add default watchers
                 if "watch_list" in auto_assign_dict:
                     watchers = self.get_group_members(auto_assign_dict["watch_list"])
                     self.toggle_watchers("add",issue,watchers)
+
+                _assign(issue,username)
+
 
     def remind_reporter_to_close(self):
         """
