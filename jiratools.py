@@ -398,18 +398,23 @@ class Housekeeping():
                 username = self.user_with_fewest_issues(auto_assign_dict["assignee_group"],
                                                         auto_assign_dict["assigned_list"])
 
-                # set indexing type to member for member tickets
-                if auto_assign_dict["issue_list"]==mem_issues:
-                    issue.update({"customfield_10500":{"id":"10103"}})
 
-                # set the indexing type to free if the reporter is in the list
-                # of users who default to free
-                if auto_assign_dict["issue_list"]==free_issues:
-                    free_index_mem = self.get_group_members("free-index-default")
-                    if issue.fields.reporter.key in free_index_mem:
-                        issue.update({"customfield_10500":{"id":"10100"}}) #free
-                    else: #default is member otherwise
-                        issue.update({"customfield_10500":{"id":"10103"}})
+                if (auto_assign_dict["issue_list"]==mem_issues or
+                    auto_assign_dict["issue_list"]==free_issues):
+                    # check if the indexing type is already set. If so, do nothing.
+                    if issue.fields.customfield_10500 == "":
+                        # default to member indexing for issues in mem_issues
+                        if auto_assign_dict["issue_list"]==mem_issues:
+                            issue.update({"customfield_10500":{"id":"10103"}})
+
+                        elif auto_assign_dict["issue_list"]==free_issues:
+                            free_index_mem = self.get_group_members("free-index-default")
+                            # set the indexing type to free if the reporter is in the list
+                            # of users who default to free
+                            if issue.fields.reporter.key in free_index_mem:
+                                issue.update({"customfield_10500":{"id":"10100"}}) #free
+                            else: #default is member otherwise
+                                issue.update({"customfield_10500":{"id":"10103"}})
 
                 # if the dict object has a watch list item, add default watchers
                 if "watch_list" in auto_assign_dict:
