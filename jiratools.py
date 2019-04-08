@@ -533,10 +533,18 @@ class Housekeeping():
         if action=="remove":
             issue_watchers = self.jira.watchers(issue).watchers
             for issue_watcher in issue_watchers:
-                self.jira.remove_watcher(issue,issue_watcher)
+                # watch list can be inconsensent when returned by the jira api
+                # same issue in the add loop
+                try:
+                    self.jira.remove_watcher(issue,issue_watcher.name)
+                except AttributeError:
+                    self.jira.add_watcher(issue,old_watcher)
         else:
             for old_watcher in watch_list:
-                self.jira.add_watcher(issue,old_watcher)
+                try:
+                    self.jira.add_watcher(issue,old_watcher.name)
+                except AttributeError:
+                    self.jira.add_watcher(issue,old_watcher)
             issue_watchers = self.jira.watchers(issue).watchers
         return issue_watchers
 
