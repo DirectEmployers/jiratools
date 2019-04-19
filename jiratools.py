@@ -402,7 +402,7 @@ class Housekeeping():
                 if (auto_assign_dict["issue_list"]==mem_issues or
                     auto_assign_dict["issue_list"]==free_issues):
                     # check if the indexing type is already set. If so, do nothing.
-                    if issue.fields.customfield_10500 == "":
+                    if issue.fields.customfield_10500 == None:
                         # default to member indexing for issues in mem_issues
                         if auto_assign_dict["issue_list"]==mem_issues:
                             issue.update({"customfield_10500":{"id":"10103"}})
