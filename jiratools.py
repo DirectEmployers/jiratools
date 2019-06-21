@@ -49,7 +49,7 @@ class Housekeeping():
 
         for issue in issues:
             reporter = issue.fields.reporter.key
-            message = '[~%s], this issue is ready for QC.' % reporter
+            message = '[~{}], this issue is ready for QC.'.format(reporter)
             """
             771 is the transition ID spedific to this step for this project.
             Anything more generic will need to parse the transitions list.
@@ -111,11 +111,10 @@ class Housekeeping():
             indexrep_summary = issue.fields.summary #build the summary
             indexrep_summary = indexrep_summary.replace("compliance audit - ","")
             indexrep_summary = indexrep_summary.split("[")[0]
-            indexrep_summary = ' %s - Failed Audit' % (indexrep_summary)
+            indexrep_summary = ' {}} - Failed Audit'.format(indexrep_summary)
 
             # Build the issue description
-            message = 'This issue failed audit. Please review %s and make any \
-                necessary corrections.' % original_ticket
+            message = 'This issue failed audit. Please review {} and make any necessary corrections.'.format(original_ticket)
 
             # Construct the watcher list and de-dupe it
             watcher_list = [issue.fields.assignee.key,]
@@ -182,7 +181,7 @@ class Housekeeping():
             # [ISSUE=123] is used to preserve the original issue key. Replace any brackets with ()
             # to prevent read errors later.
             adt_summary = issue.fields.summary.replace("[","(").replace("]",")")
-            adt_summary = 'compliance audit - %s [%s]' % (adt_summary,issue.key)
+            adt_summary = 'compliance audit - {} [{}]'.format(adt_summary,issue.key)
 
             # check reporter to see if special consideration is needed
             # if reporter is not MS or MD, or it's a new member, assign to audit lead.
@@ -201,7 +200,7 @@ class Housekeeping():
                                                           [reporter])
 
             # build the description
-            message = '[~%s], issue %s is ready to audit.' % (qa_auditor, issue.key)
+            message = '[~{}], issue {} is ready to audit.'.format(qa_auditor, issue.key)
 
             #build the watcher list, including original reporter and assignee of the audited ticket
             watcher_list = []
@@ -222,7 +221,7 @@ class Housekeeping():
             close_me = self.close_issue(issue.key)
 
             # add comment to indexrep ticket
-            link_back_comment = "This issue has been closed. The audit ticket is %s" % new_issue
+            link_back_comment = "This issue has been closed. The audit ticket is {}".format(new_issue)
             self.jira.add_comment(issue.key, link_back_comment)
 
 
@@ -313,10 +312,15 @@ class Housekeeping():
         # add comments
         quoted_comments = ""
         for comment in comments:
-            quoted_comments = "%s[~%s] Said:{quote}%s{quote}\\\ \\\ " % (quoted_comments,comment['author'],comment['body'])
+            quoted_comments = "{}[~{}] Said:{}{}{}\\\ \\\ ".format(
+                                                                quoted_comments,
+                                                                comment['author'],
+                                                                "{quote}",
+                                                                comment['body'],
+                                                                "{quote}")
 
         if quoted_comments:
-            quoted_comments = "Comments from the parent issue:\\\ %s" % quoted_comments
+            quoted_comments = "Comments from the parent issue:\\\ {}".format(quoted_comments)
             self.jira.add_comment(new_issue,quoted_comments)
 
         return new_issue
@@ -366,8 +370,7 @@ class Housekeeping():
             reporter = issue.fields.reporter.key
             self.jira.assign_issue(issue=issue,assignee=username)
 
-            message = ("[~%s], this issue has been automically assigned "
-                "to [~%s].") % (reporter,username)
+            message = ("[~{}], this issue has been automically assigned to [~{}].").format(reporter,username)
             self.jira.add_comment(issue.key, message)
 
         auto_assign_dicts = [
@@ -434,9 +437,7 @@ class Housekeeping():
         issues = self.get_issues("remind_close_issues")
         for issue in issues:
             reporter = issue.fields.reporter.key
-            message = (
-                "[~%s], this issue has been resolved for 13 days. It will be "
-                "closed automatically in 24 hours.") % reporter
+            message = "[~{}], this issue has been resolved for 13 days. It will be closed automatically in 24 hours.".format(reporter)
             watch_list = self.toggle_watchers("remove",issue)
             self.jira.add_comment(issue.key,message)
             issue.fields.labels.append(self.ac_label)
@@ -453,8 +454,7 @@ class Housekeeping():
         issues = self.get_issues("auto_close_issues")
         for issue in issues:
             reporter = issue.fields.reporter.key
-            message = (
-                "[~%s], this issue has closed automatically.") % reporter
+            message = "[~{}}], this issue has closed automatically.".format(reporter)
             close_me = self.close_issue(issue)
             self.jira.add_comment(issue.key,message)
 
