@@ -1,5 +1,5 @@
 """
-Jira Housekeeping copyright 2014-2018 DirectEmployers Association. See README
+Jira Housekeeping copyright 2014-2019 DirectEmployers Association. See README
 for license info.
 
 Reference for using the jira client:
