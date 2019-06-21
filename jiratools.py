@@ -13,7 +13,7 @@ import operator
 import secrets
 import settings
 
-class Housekeeping():
+class Housekeeping:
     """
     This class is the container for all automated Jira functions performed
     by the Housekeeping agent.
