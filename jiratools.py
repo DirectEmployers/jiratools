@@ -111,7 +111,7 @@ class Housekeeping:
             indexrep_summary = issue.fields.summary #build the summary
             indexrep_summary = indexrep_summary.replace("compliance audit - ","")
             indexrep_summary = indexrep_summary.split("[")[0]
-            indexrep_summary = ' {}} - Failed Audit'.format(indexrep_summary)
+            indexrep_summary = ' {} - Failed Audit'.format(indexrep_summary)
 
             # Build the issue description
             message = 'This issue failed audit. Please review {} and make any necessary corrections.'.format(original_ticket)
@@ -454,7 +454,7 @@ class Housekeeping:
         issues = self.get_issues("auto_close_issues")
         for issue in issues:
             reporter = issue.fields.reporter.key
-            message = "[~{}}], this issue has closed automatically.".format(reporter)
+            message = "[~{}], this issue has closed automatically.".format(reporter)
             close_me = self.close_issue(issue)
             self.jira.add_comment(issue.key,message)
 
