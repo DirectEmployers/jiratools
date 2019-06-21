@@ -20,8 +20,6 @@ class Housekeeping:
 
     """
     def __init__(self):
-        # class variables
-        self.ac_label =  u'auto-close-24-hours'
         # open JIRA API Connection
         self.jira = JIRA(options=secrets.options,
                             basic_auth=secrets.housekeeping_auth)
@@ -438,11 +436,8 @@ class Housekeeping:
         for issue in issues:
             reporter = issue.fields.reporter.key
             message = "[~{}], this issue has been resolved for 13 days. It will be closed automatically in 24 hours.".format(reporter)
-            watch_list = self.toggle_watchers("remove",issue)
-            self.jira.add_comment(issue.key,message)
-            issue.fields.labels.append(self.ac_label)
-            issue.update(fields={"labels": issue.fields.labels})
-            self.toggle_watchers("add",issue, watch_list)
+            self.bot_comment(issue,message)
+            self.toggle_label(issue,secrets.ac_label,"add")
 
     def close_resolved(self):
         """
@@ -455,8 +450,9 @@ class Housekeeping:
         for issue in issues:
             reporter = issue.fields.reporter.key
             message = "[~{}], this issue has closed automatically.".format(reporter)
-            close_me = self.close_issue(issue)
-            self.jira.add_comment(issue.key,message)
+            print("closed {}".format(issue))
+            self.close_issue(issue)
+            self.bot_comment(issue,message)
 
     def get_transition_id(self,issue,key):
         """
@@ -482,6 +478,7 @@ class Housekeeping:
         Returns: True|False
 
         """
+        watch_list = self.toggle_watchers("remove",issue)
         trans = self.jira.transitions(issue)
         success_flag = False
         tran_id = self.get_transition_id(issue,"close")
@@ -496,6 +493,8 @@ class Housekeeping:
             except: #open ended, but the JIRAError exception is broken.
                 self.jira.transition_issue(issue,tran_id)
             success_flag = True
+
+        watch_list = self.toggle_watchers("add",issue,watch_list)
         return success_flag
 
     def clear_auto_close_label(self):
@@ -504,16 +503,37 @@ class Housekeeping:
         since the auto-close reminder was posted.
 
         """
-        issues = self.jira.search_issues(
-            'status in ("Quality Control", Reopened, Merged, open) \
-            AND labels in (auto-close-24-hours)')
+        issues = self.get_issues("autoclose_label")
         for issue in issues:
-            label_list =  issue.fields.labels
-            watch_list = self.toggle_watchers("remove",issue)
-            label_list.remove(self.ac_label)
-            issue.update(fields={"labels": label_list})
-            self.toggle_watchers("add",issue, watch_list)
+            self.toggle_label(issue,secrets.ac_label,"remove")
 
+    def bot_comment(self,issue,message):
+        """
+        Comments on a ticket without notifying watchers.
+        Inputs: Issue: the issue object to close
+        Message: What to comment
+
+        """
+        watch_list = self.toggle_watchers("remove",issue)
+        self.jira.add_comment(issue.key,message)
+        self.toggle_watchers("add",issue, watch_list)
+
+    def toggle_label(self,issue,label,action):
+        """
+        Adds a label without notifying watchers.
+        Inputs: issue: the issue object to label
+                label: the label to add/remove
+                action: add/remove (str)
+
+        """
+        watch_list = self.toggle_watchers("remove",issue)
+        label_list =  issue.fields.labels
+        if action=="add":
+            label_list.append(label)
+        else:
+            label_list.remove(label)
+        issue.update(fields={"labels": label_list})
+        self.toggle_watchers("add",issue, watch_list)
 
     def toggle_watchers(self,action,issue,watch_list=[]):
         """
