@@ -1,5 +1,5 @@
 """
-Jira Housekeeping copyright 2014-2018 DirectEmployers Association. See README
+Jira Housekeeping copyright 2014-2019 DirectEmployers Association. See README
 for license info.
 
 Reference for using the jira client:
@@ -13,15 +13,13 @@ import operator
 import secrets
 import settings
 
-class Housekeeping():
+class Housekeeping:
     """
     This class is the container for all automated Jira functions performed
     by the Housekeeping agent.
 
     """
     def __init__(self):
-        # class variables
-        self.ac_label =  u'auto-close-24-hours'
         # open JIRA API Connection
         self.jira = JIRA(options=secrets.options,
                             basic_auth=secrets.housekeeping_auth)
@@ -49,7 +47,7 @@ class Housekeeping():
 
         for issue in issues:
             reporter = issue.fields.reporter.key
-            message = '[~%s], this issue is ready for QC.' % reporter
+            message = '[~{}], this issue is ready for QC.'.format(reporter)
             """
             771 is the transition ID spedific to this step for this project.
             Anything more generic will need to parse the transitions list.
@@ -111,11 +109,10 @@ class Housekeeping():
             indexrep_summary = issue.fields.summary #build the summary
             indexrep_summary = indexrep_summary.replace("compliance audit - ","")
             indexrep_summary = indexrep_summary.split("[")[0]
-            indexrep_summary = ' %s - Failed Audit' % (indexrep_summary)
+            indexrep_summary = ' {} - Failed Audit'.format(indexrep_summary)
 
             # Build the issue description
-            message = 'This issue failed audit. Please review %s and make any \
-                necessary corrections.' % original_ticket
+            message = 'This issue failed audit. Please review {} and make any necessary corrections.'.format(original_ticket)
 
             # Construct the watcher list and de-dupe it
             watcher_list = [issue.fields.assignee.key,]
@@ -182,7 +179,7 @@ class Housekeeping():
             # [ISSUE=123] is used to preserve the original issue key. Replace any brackets with ()
             # to prevent read errors later.
             adt_summary = issue.fields.summary.replace("[","(").replace("]",")")
-            adt_summary = 'compliance audit - %s [%s]' % (adt_summary,issue.key)
+            adt_summary = 'compliance audit - {} [{}]'.format(adt_summary,issue.key)
 
             # check reporter to see if special consideration is needed
             # if reporter is not MS or MD, or it's a new member, assign to audit lead.
@@ -201,7 +198,7 @@ class Housekeeping():
                                                           [reporter])
 
             # build the description
-            message = '[~%s], issue %s is ready to audit.' % (qa_auditor, issue.key)
+            message = '[~{}], issue {} is ready to audit.'.format(qa_auditor, issue.key)
 
             #build the watcher list, including original reporter and assignee of the audited ticket
             watcher_list = []
@@ -222,7 +219,7 @@ class Housekeeping():
             close_me = self.close_issue(issue.key)
 
             # add comment to indexrep ticket
-            link_back_comment = "This issue has been closed. The audit ticket is %s" % new_issue
+            link_back_comment = "This issue has been closed. The audit ticket is {}".format(new_issue)
             self.jira.add_comment(issue.key, link_back_comment)
 
 
@@ -313,10 +310,15 @@ class Housekeeping():
         # add comments
         quoted_comments = ""
         for comment in comments:
-            quoted_comments = "%s[~%s] Said:{quote}%s{quote}\\\ \\\ " % (quoted_comments,comment['author'],comment['body'])
+            quoted_comments = "{}[~{}] Said:{}{}{}\\\ \\\ ".format(
+                                                                quoted_comments,
+                                                                comment['author'],
+                                                                "{quote}",
+                                                                comment['body'],
+                                                                "{quote}")
 
         if quoted_comments:
-            quoted_comments = "Comments from the parent issue:\\\ %s" % quoted_comments
+            quoted_comments = "Comments from the parent issue:\\\ {}".format(quoted_comments)
             self.jira.add_comment(new_issue,quoted_comments)
 
         return new_issue
@@ -366,8 +368,7 @@ class Housekeeping():
             reporter = issue.fields.reporter.key
             self.jira.assign_issue(issue=issue,assignee=username)
 
-            message = ("[~%s], this issue has been automically assigned "
-                "to [~%s].") % (reporter,username)
+            message = ("[~{}], this issue has been automically assigned to [~{}].").format(reporter,username)
             self.jira.add_comment(issue.key, message)
 
         auto_assign_dicts = [
@@ -434,14 +435,9 @@ class Housekeeping():
         issues = self.get_issues("remind_close_issues")
         for issue in issues:
             reporter = issue.fields.reporter.key
-            message = (
-                "[~%s], this issue has been resolved for 13 days. It will be "
-                "closed automatically in 24 hours.") % reporter
-            watch_list = self.toggle_watchers("remove",issue)
-            self.jira.add_comment(issue.key,message)
-            issue.fields.labels.append(self.ac_label)
-            issue.update(fields={"labels": issue.fields.labels})
-            self.toggle_watchers("add",issue, watch_list)
+            message = "[~{}], this issue has been resolved for 13 days. It will be closed automatically in 24 hours.".format(reporter)
+            self.bot_comment(issue,message)
+            self.toggle_label(issue,secrets.ac_label,"add")
 
     def close_resolved(self):
         """
@@ -453,10 +449,10 @@ class Housekeeping():
         issues = self.get_issues("auto_close_issues")
         for issue in issues:
             reporter = issue.fields.reporter.key
-            message = (
-                "[~%s], this issue has closed automatically.") % reporter
-            close_me = self.close_issue(issue)
-            self.jira.add_comment(issue.key,message)
+            message = "[~{}], this issue has closed automatically.".format(reporter)
+            print("closed {}".format(issue))
+            self.close_issue(issue)
+            self.bot_comment(issue,message)
 
     def get_transition_id(self,issue,key):
         """
@@ -482,6 +478,7 @@ class Housekeeping():
         Returns: True|False
 
         """
+        watch_list = self.toggle_watchers("remove",issue)
         trans = self.jira.transitions(issue)
         success_flag = False
         tran_id = self.get_transition_id(issue,"close")
@@ -496,6 +493,8 @@ class Housekeeping():
             except: #open ended, but the JIRAError exception is broken.
                 self.jira.transition_issue(issue,tran_id)
             success_flag = True
+
+        watch_list = self.toggle_watchers("add",issue,watch_list)
         return success_flag
 
     def clear_auto_close_label(self):
@@ -504,16 +503,37 @@ class Housekeeping():
         since the auto-close reminder was posted.
 
         """
-        issues = self.jira.search_issues(
-            'status in ("Quality Control", Reopened, Merged, open) \
-            AND labels in (auto-close-24-hours)')
+        issues = self.get_issues("autoclose_label")
         for issue in issues:
-            label_list =  issue.fields.labels
-            watch_list = self.toggle_watchers("remove",issue)
-            label_list.remove(self.ac_label)
-            issue.update(fields={"labels": label_list})
-            self.toggle_watchers("add",issue, watch_list)
+            self.toggle_label(issue,secrets.ac_label,"remove")
 
+    def bot_comment(self,issue,message):
+        """
+        Comments on a ticket without notifying watchers.
+        Inputs: Issue: the issue object to close
+        Message: What to comment
+
+        """
+        watch_list = self.toggle_watchers("remove",issue)
+        self.jira.add_comment(issue.key,message)
+        self.toggle_watchers("add",issue, watch_list)
+
+    def toggle_label(self,issue,label,action):
+        """
+        Adds a label without notifying watchers.
+        Inputs: issue: the issue object to label
+                label: the label to add/remove
+                action: add/remove (str)
+
+        """
+        watch_list = self.toggle_watchers("remove",issue)
+        label_list =  issue.fields.labels
+        if action=="add":
+            label_list.append(label)
+        else:
+            label_list.remove(label)
+        issue.update(fields={"labels": label_list})
+        self.toggle_watchers("add",issue, watch_list)
 
     def toggle_watchers(self,action,issue,watch_list=[]):
         """
