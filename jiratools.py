@@ -130,6 +130,7 @@ class Housekeeping:
                                                 adt_wcid,adt_old_buid,adt_old_wcid,
                                                 adt_indexing_type,adt_comments)
             close_me = self.close_issue(issue.key)
+            print (issue.key)
 
 
     def resolved_issue_audit(self):

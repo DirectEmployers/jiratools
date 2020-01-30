@@ -25,8 +25,20 @@ class MonthlyCount:
         """
 
         # format date ranges & add to query. Defaults to last month
-        start_date = "{}-{}-{}".format(datetime.now().year,datetime.now().month-1,1)
-        end_date = "{}-{}-{}".format(datetime.now().year,datetime.now().month,1)
+        start_month = datetime.now().month-1
+        if start_month == 0: start_month = 12
+        start_month = start_month if start_month > 9 else "0{}".format(start_month)
+
+        end_month = datetime.now().month
+        if end_month == 0: end_month = 12
+        end_month=end_month if end_month > 9 else "0{}".format(end_month)
+
+        start_year=datetime.now().year
+        if start_month==12: start_year = start_year-1
+        end_year=datetime.now().year
+
+        start_date = "{}-{}-01".format(start_year,start_month)
+        end_date = "{}-{}-01".format(end_year,end_month)
         query = '{} and resolutiondate >= "{}" and resolutiondate < "{}"'.format(query,start_date,end_date)
 
         # retrieve data. Loop until there are less than 100 results (API limit)
