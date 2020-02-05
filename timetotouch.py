@@ -1,7 +1,5 @@
 from datetime import datetime
 from jira.client import JIRA
-import logging
-import operator
 import secrets
 import settings
 import statistics
