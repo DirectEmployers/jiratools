@@ -41,7 +41,7 @@ class TimeToTouch:
 
         # init the list to contain the touch time
         touchList = []
-        # get SE user list
+        # get user list
         userList = self.get_group_members(team)
         for issue in issues:
             createdDate=datetime.strptime(
@@ -57,6 +57,9 @@ class TimeToTouch:
             logCount = ticketLog.__len__()
             i = logCount-1
             countItem=False
+
+            # walk the log list until oldest entry found.
+            # The list is newest first, so start in the back
             while i >= 0:
                 author = ticketLog.__getitem__(i).author
                 if author.key in userList:
@@ -73,14 +76,15 @@ class TimeToTouch:
                 else:
                     i=i-1
             if(countItem):
+                # Ignore issues where noone from the user list is in the log
+                # This happens when a ticket is handled by someone outside the team
                 touchList.append(touchDict)
 
-        total=0
         touchTimeData = []
         for touch in touchList:
             touchTimeData.append(touch["touchTime"])
 
-        # buils the output strings and print to console.
+        # builds the output strings and prints to console.
         touchAverage = round(statistics.mean(touchTimeData),2)
         touchAverage = self.min_hr_switch(touchAverage)
         touchMedian = round(statistics.median(touchTimeData),2)
