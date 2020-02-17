@@ -46,8 +46,11 @@ class Housekeeping:
         issues = self.get_issues("auto_qc")
 
         for issue in issues:
-            reporter = issue.fields.reporter.key
-            message = '[~{}], this issue is ready for QC.'.format(reporter)
+            #print(dir(issue.fields.reporter))
+            reporter = issue.fields.reporter.displayName
+            reporterID = issue.fields.reporter.accountId
+            #[Laurie Pensworth|~accountid:557058:1679d706-818a-4060-a109-8f11bfb8b1fd]
+            message = '[~{}|accountid:], this issue is ready for QC.'.format(reporter)
             """
             771 is the transition ID spedific to this step for this project.
             Anything more generic will need to parse the transitions list.
@@ -168,7 +171,7 @@ class Housekeeping:
             ind_old_buid=issue.fields.customfield_13100 #oldBUID
             ind_old_wcid=issue.fields.customfield_13101 #oldWCID
             ind_indexing_type=issue.fields.customfield_10500 #Indexing Type
-            reporter = issue.fields.reporter.key #Reporter
+            reporter = issue.fields.reporter.accountId #Reporter
 
             link_list = [issue.key,]
             for link in issue.fields.issuelinks: # grab the rest of links
@@ -197,14 +200,15 @@ class Housekeeping:
                 qa_auditor = self.user_with_fewest_issues('issue audits',
                                                           assigned_audit_tasks_query,
                                                           [reporter])
-
+            # (qa_auditor)
+            #qa_auditor_user_obj = self.jira.user(qa_auditor)
             # build the description
-            message = '[~{}], issue {} is ready to audit.'.format(qa_auditor, issue.key)
+            message = 'Issue {} is ready to audit.'.format(issue.key)
 
             #build the watcher list, including original reporter and assignee of the audited ticket
             watcher_list = []
             for w in self.jira.watchers(issue).watchers:
-                watcher_list.append(w.key)
+                watcher_list.append(w.accountId)
 
             try:
                 original_assignee = issue.fields.assignee.key
@@ -282,8 +286,8 @@ class Housekeeping:
         new_issue = self.jira.create_issue(fields=issue_dict)
 
         # assign the audit tick to auditor
-        new_issue.update(assignee={'name':issue_assignee})
-        new_issue.update(reporter={'name':issue_reporter})
+        new_issue.update(assignee={'accountId':issue_assignee})
+        new_issue.update(reporter={'accountId':issue_reporter})
 
         # add watchers to audit ticket (reporter, assignee, wacthers from indexrep ticket)
         for watcher in watchers:
@@ -330,7 +334,12 @@ class Housekeeping:
         Returns the members of a group as a list
         """
         group = self.jira.groups(query=group_name)[0]
-        members = self.jira.group_members(group)
+        """print("----")
+        print(group)
+        print("----")
+        print(group.title())
+        print("----")"""
+        members = self.jira.group_members(group.title())
         return members
 
     def auto_assign(self,project="INDEXREP"):
@@ -366,10 +375,13 @@ class Housekeeping:
             username: person to assign the issue
 
             """
-            reporter = issue.fields.reporter.key
+            reporter = issue.fields.reporter.accountId
+            reporterName = issue.fields.reporter.displayName
             self.jira.assign_issue(issue=issue,assignee=username)
 
-            message = ("[~{}], this issue has been automically assigned to [~{}].").format(reporter,username)
+            #message = ("[~{}], this issue has been automically assigned to [~{}].").format(reporter,username)
+            message = ("[{}|~accountid:{}], this issue has been automically assigned").format(
+                reporterName,reporter)
             self.jira.add_comment(issue.key, message)
 
         auto_assign_dicts = [
@@ -413,7 +425,7 @@ class Housekeeping:
                             free_index_mem = self.get_group_members("free-index-default")
                             # set the indexing type to free if the reporter is in the list
                             # of users who default to free
-                            if issue.fields.reporter.key in free_index_mem:
+                            if issue.fields.reporter.accountId in free_index_mem:
                                 issue.update({"customfield_10500":{"id":"10100"}}) #free
                             else: #default is member otherwise
                                 issue.update({"customfield_10500":{"id":"10103"}})
@@ -422,7 +434,8 @@ class Housekeeping:
                 if "watch_list" in auto_assign_dict:
                     watchers = self.get_group_members(auto_assign_dict["watch_list"])
                     self.toggle_watchers("add",issue,watchers)
-
+                #print("*******")
+                print(issue.key)
                 _assign(issue,username)
 
 
@@ -435,8 +448,9 @@ class Housekeeping:
         """
         issues = self.get_issues("remind_close_issues")
         for issue in issues:
-            reporter = issue.fields.reporter.key
-            message = "[~{}], this issue has been resolved for 13 days. It will be closed automatically in 24 hours.".format(reporter)
+            reporter = issue.fields.reporter.accountId
+            reporterName = issue.fields.reporter.displayName
+            message = "[{}|~accountid:{}], this issue has been resolved for 13 days. It will be closed automatically in 24 hours.".format(reporterName,reporter)
             self.bot_comment(issue,message)
             self.toggle_label(issue,secrets.ac_label,"add")
 
@@ -449,9 +463,10 @@ class Housekeeping:
         """
         issues = self.get_issues("auto_close_issues")
         for issue in issues:
-            reporter = issue.fields.reporter.key
-            message = "[~{}], this issue has closed automatically.".format(reporter)
-            print("closed {}".format(issue))
+            reporter = issue.fields.reporter.accountId
+            reporterName = issue.fields.reporter.displayName
+            message = ("[{}|~accountid:{}], this issue has been closed automically").format(reporterName,reporter)
+            #print("closed {}".format(issue))
             self.close_issue(issue)
             self.bot_comment(issue,message)
 
@@ -557,13 +572,13 @@ class Housekeeping:
                 # watch list can be inconsensent when returned by the jira api
                 # same issue in the add loop
                 try:
-                    self.jira.remove_watcher(issue,issue_watcher.name)
+                    self.jira.remove_watcher(issue,issue_watcher.accountId)
                 except AttributeError:
-                    self.jira.add_watcher(issue,old_watcher)
+                    pass #self.jira.add_watcher(issue,old_watcher)
         else:
             for old_watcher in watch_list:
                 try:
-                    self.jira.add_watcher(issue,old_watcher.name)
+                    self.jira.add_watcher(issue,old_watcher.accountId)
                 except AttributeError:
                     self.jira.add_watcher(issue,old_watcher)
             issue_watchers = self.jira.watchers(issue).watchers
@@ -621,7 +636,7 @@ class Housekeeping:
 
     def user_with_fewest_issues(self,group,query,blacklist=[]):
         """
-        Given a query, return the username of the use with the fewest assigned
+        Given a query, return the username of the user with the fewest assigned
         issues in the result set.
 
         Inputs:
@@ -641,7 +656,7 @@ class Housekeeping:
         # perform the count anew for each ticket
         for issue in issues:
             if issue.fields.assignee:
-                assignee = issue.fields.assignee.key
+                assignee = issue.fields.assignee.accountId
             else:
                 assignee = None
             if assignee in members and not self.label_contains(issue,"wait"):
