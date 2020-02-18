@@ -89,7 +89,7 @@ class Housekeeping:
             for comment in self.jira.comments(issue):
                 node = {
                     'body':self.jira.comment(issue,comment).body,
-                    'author': self.jira.comment(issue,comment).author.key
+                    'author': self.jira.comment(issue,comment).author #checkme
                 }
                 adt_comments.append(node)
 
@@ -118,13 +118,16 @@ class Housekeeping:
             message = 'This issue failed audit. Please review {} and make any necessary corrections.'.format(original_ticket)
 
             # Construct the watcher list and de-dupe it
-            watcher_list = [issue.fields.assignee.key,]
+            watcher_list = [issue.fields.assignee.accountId,]#checkme
             for w in self.jira.watchers(issue).watchers:
-                watcher_list.append(w.key)
+                watcher_list.append(w.accountId)#checkme
             watcher_list = set(watcher_list)
-
+            print("Watcher List")
+            print("---------------------")
+            print(watcher_list)
+            print("---------------------")
             # get the reporter (reporter is preserved from audit to issue)
-            reporter = issue.fields.reporter.key
+            reporter = issue.fields.reporter.accountId#checkme
 
             # Generate the new issue, then close the audit ticket.
             new_issue = self.make_new_issue(original_project,"",reporter,
@@ -211,7 +214,7 @@ class Housekeeping:
                 watcher_list.append(w.accountId)
 
             try:
-                original_assignee = issue.fields.assignee.key
+                original_assignee = issue.fields.assignee.key#checkme
             except AttributeError:
                 original_assignee=""
 
@@ -286,17 +289,24 @@ class Housekeeping:
         new_issue = self.jira.create_issue(fields=issue_dict)
 
         # assign the audit tick to auditor
-        new_issue.update(assignee={'accountId':issue_assignee})
+        if issue_assignee:
+            print("AccountId: {}".format(issue_assignee))
+            new_issue.update(assignee={'accountId':issue_assignee})
+        print("AccountId: {}".format(issue_reporter))
         new_issue.update(reporter={'accountId':issue_reporter})
 
         # add watchers to audit ticket (reporter, assignee, wacthers from indexrep ticket)
+        print(watchers)
         for watcher in watchers:
             try:
                 self.jira.add_watcher(new_issue,watcher)
+                print("Watcher added: {}".format(watcher))
             except:
+                print("Watcher skipped: {}".format(watcher))
                 pass
 
         # link the audit ticket back to indexrep ticket
+        print(links)
         for link in links:
             self.jira.create_issue_link('Relates',new_issue,link)
 
@@ -327,6 +337,7 @@ class Housekeeping:
             self.jira.add_comment(new_issue,quoted_comments)
 
         return new_issue
+
 
     # method to transistion audit ticket
     def get_group_members(self, group_name):
