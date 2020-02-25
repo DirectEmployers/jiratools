@@ -50,7 +50,7 @@ class Housekeeping:
             reporter = issue.fields.reporter.displayName
             reporterID = issue.fields.reporter.accountId
             #[Laurie Pensworth|~accountid:557058:1679d706-818a-4060-a109-8f11bfb8b1fd]
-            message = '[~{}|accountid:], this issue is ready for QC.'.format(reporter)
+            message = '[~{}|accountid:{}], this issue is ready for QC.'.format(reporter,reporterID)
             """
             771 is the transition ID spedific to this step for this project.
             Anything more generic will need to parse the transitions list.
