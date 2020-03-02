@@ -58,21 +58,26 @@ class TimeToTouch:
 
             # walk the log list until oldest entry found.
             # The list is newest first, so start in the back
+            #print(userList)
             while i >= 0:
                 author = ticketLog.__getitem__(i).author
-                if author.key in userList:
+                #print(author.accountId)
+
+                if author.accountId in userList:
                     seTouchDate=datetime.strptime(
                         ticketLog.__getitem__(i).created.split(".")[0],
                         "%Y-%m-%dT%H:%M:%S"
                         )
                     seTouch = seTouchDate-createdDate
                     seTouchHours = round(seTouch.total_seconds()/60/60,2)
-                    touchDict["User"]=author.key
+                    #print(author)
+                    touchDict["User"]=author
                     touchDict["touchTime"]=seTouchHours
                     countItem=True
                     i=-1
                 else:
                     i=i-1
+
             if(countItem):
                 # Ignore issues where noone from the user list is in the log
                 # This happens when a ticket is handled by someone outside the team
@@ -91,7 +96,7 @@ class TimeToTouch:
         print("    Average: {}".format(touchAverage))
         print("    Median: {}".format(touchMedian))
         print()
-
+        
 
     def get_issues(self,jql,start,max):
         """
