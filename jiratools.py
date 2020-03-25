@@ -446,8 +446,8 @@ class Housekeeping:
                     watchers = self.get_group_members(auto_assign_dict["watch_list"])
                     self.toggle_watchers("add",issue,watchers)
                 #print("*******")
-                print(issue.key)
-                print(username)
+                #print(issue.key)
+                #print(username)
                 _assign(issue,username)
 
 
