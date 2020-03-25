@@ -391,8 +391,8 @@ class Housekeeping:
             self.jira.assign_issue(issue=issue,assignee=username)
 
             #message = ("[~{}], this issue has been automically assigned to [~{}].").format(reporter,username)
-            message = ("[{}|~accountid:{}], this issue has been automically assigned").format(
-                reporterName,reporter)
+            message = ("[{}|~accountid:{}], this issue has been assigned to [~accountid:{}]").format(
+                reporterName,reporter,username)
             self.jira.add_comment(issue.key, message)
 
         auto_assign_dicts = [
@@ -447,6 +447,7 @@ class Housekeeping:
                     self.toggle_watchers("add",issue,watchers)
                 #print("*******")
                 print(issue.key)
+                print(username)
                 _assign(issue,username)
 
 
@@ -476,7 +477,7 @@ class Housekeeping:
         for issue in issues:
             reporter = issue.fields.reporter.accountId
             reporterName = issue.fields.reporter.displayName
-            message = ("[{}|~accountid:{}], this issue has been closed automically").format(reporterName,reporter)
+            message = ("[{}|~accountid:{}], this issue has been closed automatically").format(reporterName,reporter)
             #print("closed {}".format(issue))
             self.close_issue(issue)
             self.bot_comment(issue,message)
