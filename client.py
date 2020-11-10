@@ -64,7 +64,7 @@ from jira.resources import SecurityLevel
 from jira.resources import ServiceDesk
 from jira.resources import Sprint
 from jira.resources import Status
-from jira.resources import StatusCategory
+#from jira.resources import StatusCategory
 from jira.resources import User
 from jira.resources import Group
 from jira.resources import Version
