@@ -355,9 +355,9 @@ class Housekeeping:
 
     def auto_assign(self,project="INDEXREP"):
         """
-        Looks up new INDEXREP issues with an empty assignee and non-agent
-        reporter and assigns them to the user in the content-acquisition user
-        group with the fewest assigned contect-acquistion tickets.
+        Looks up new issues with an empty assignee and non-agent reporter and
+        assigns them to the user in the user group with the fewest assigned
+        tickets.
 
         """
         # get member INDEXREP issues that need to auto assigned
@@ -378,15 +378,22 @@ class Housekeeping:
         # get non-resolved sales engineering issues
         se_assigned_issues_query = self.get_issues("se_assigned_issues",True)
 
-        def _assign(issue,username):
+        def _assign(issue,username,group=[],query=[]):
             """
             Private method for assigning an issue.
             Inputs:
             issue: issue to assign
             username: person to assign the issue
+            group: group to check when calling user_with_fewest_issues()
+            query: query to pass into user_with_fewest_issues()
 
             """
             reporter = issue.fields.reporter.accountId
+            # check if the reporter and assignee are the same. If so, rerun the
+            # auto assign with the reporter blacklisted
+            if reporter==username:
+                username = self.user_with_fewest_issues(group,query,[reporter])
+
             reporterName = issue.fields.reporter.displayName
             self.jira.assign_issue(issue=issue,assignee=username)
 
@@ -448,7 +455,7 @@ class Housekeeping:
                 #print("*******")
                 #print(issue.key)
                 #print(username)
-                _assign(issue,username)
+                _assign(issue,username,auto_assign_dict["assignee_group"],auto_assign_dict["assigned_list"])
 
 
     def remind_reporter_to_close(self):
