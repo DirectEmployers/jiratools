@@ -384,13 +384,15 @@ class Housekeeping:
             Inputs:
             issue: issue to assign
             username: person to assign the issue
+            group: group to check when calling user_with_fewest_issues()
+            query: query to pass into user_with_fewest_issues()
 
             """
             reporter = issue.fields.reporter.accountId
             # check if the reporter and assignee are the same. If so, rerun the
             # auto assign with the reporter blacklisted
             if reporter==username:
-                username = self.user_with_fewest_issues(group,query,reporter)
+                username = self.user_with_fewest_issues(group,query,[reporter])
 
             reporterName = issue.fields.reporter.displayName
             self.jira.assign_issue(issue=issue,assignee=username)
@@ -518,7 +520,6 @@ class Housekeeping:
         if not tran_id:
             tran_id = self.get_transition_id(issue,"complete")
 
-        print(issue)
         if tran_id:
             try:
                 self.jira.transition_issue(issue,tran_id,
